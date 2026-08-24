@@ -21,6 +21,25 @@ void RepositoryModel::SetBasePath( std::filesystem::path const& basePath ) {
   items_.clear();
 
   ScanPath( basePath_, 0 );
+  for( auto iter = std::filesystem::recursive_directory_iterator( basePath_ ); iter != std::filesystem::recursive_directory_iterator(); iter++ ) {
+    if( !std::filesystem::is_directory( *iter ) ) {
+      continue;
+    }
+    if( iter->path().filename() == ".git" ) {
+      // we don't care about git data folders
+      continue;
+    }
+    if( iter->path().filename() == ".svn" ) {
+      // we don't care about svn data folders
+      continue;
+    }
+    if( iter->path().filename().string().starts_with( "." ) ) {
+      // ignore hidden folders for now
+      continue;
+    }
+    ScanPath( iter->path(), uint32_t( iter.depth() + 1 ) );
+  }
+
 
   ItemsAdded( wxDataViewItem(), wxDataViewItemArray( items_.begin(), items_.end() ) );
 }
@@ -144,28 +163,5 @@ void RepositoryModel::ScanPath( std::filesystem::path const& path, uint32_t dept
     // error
     git_error const* e = git_error_last();
     Log::Error( "Git error at '%s': %d/%d: %s", path.string().c_str(), error, e->klass, e->message );
-  }
-
-  std::list< std::filesystem::path > dirEntries;
-  for( std::filesystem::directory_entry const& item : std::filesystem::directory_iterator( path ) ) {
-    if( !std::filesystem::is_directory( item ) ) {
-      continue;
-    }
-    if( item.path().filename() == ".git" ) {
-      // we don't care about git data folders
-      continue;
-    }
-    if( item.path().filename() == ".svn" ) {
-      // we don't care about svn data folders
-      continue;
-    }
-    if( item.path().filename().string().starts_with( "." ) ) {
-      // ignore hidden folders for now
-      continue;
-    }
-    dirEntries.push_back( item.path() );
-  }
-  for( std::filesystem::path const& dirEntry : dirEntries ) {
-    ScanPath( dirEntry, depth + 1 );
   }
 }
