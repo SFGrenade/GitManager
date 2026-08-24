@@ -11,12 +11,12 @@
 
 class RepositoryModel : public wxDataViewModel {
   public:
-  typedef wxDataViewItem Data;
   struct InternalData {
     uint32_t depth = 0;
     std::filesystem::path folderPath{};
     std::shared_ptr< git_repository > gitRepo = nullptr;
   };
+  typedef wxItemId< InternalData* > Data;
 
   public:
   RepositoryModel();

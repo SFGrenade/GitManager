@@ -7,9 +7,6 @@
 // Library headers
 #include <wx/log.h>
 
-// C++ headers
-#include <list>
-
 RepositoryModel::RepositoryModel() {
   Log::Trace( "RepositoryModel::RepositoryModel()" );
 }
@@ -17,7 +14,9 @@ RepositoryModel::RepositoryModel() {
 void RepositoryModel::SetBasePath( std::filesystem::path const& basePath ) {
   basePath_ = basePath;
 
-  ItemsDeleted( wxDataViewItem(), wxDataViewItemArray( items_.begin(), items_.end() ) );
+  for( auto const& item : items_ ) {
+    ItemDeleted( wxDataViewItem(), reinterpret_cast< wxDataViewItem const& >( item ) );
+  }
   items_.clear();
 
   ScanPath( basePath_, 0 );
@@ -39,61 +38,70 @@ void RepositoryModel::SetBasePath( std::filesystem::path const& basePath ) {
     }
     ScanPath( iter->path(), uint32_t( iter.depth() + 1 ) );
   }
-
-
-  ItemsAdded( wxDataViewItem(), wxDataViewItemArray( items_.begin(), items_.end() ) );
 }
 
-void RepositoryModel::GetValue( wxVariant& out_variant, wxDataViewItem const& item, uint32_t col ) const {
+void RepositoryModel::GetValue( wxVariant& out_variant, wxDataViewItem const& wxdviItem, uint32_t col ) const {
+  RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
   if( col == 0 ) {
-    out_variant = wxVariant( reinterpret_cast< InternalData* >( item.GetID() )->folderPath.filename().string(), "Folder Name" );
+    out_variant = wxVariant( item->folderPath.filename().string(), "Folder Name" );
   } else if( col == 1 ) {
-    out_variant = wxVariant( std::to_string( reinterpret_cast< InternalData* >( item.GetID() )->depth ), "Depth" );
+    out_variant = wxVariant( std::to_string( item->depth ), "Depth" );
   } else if( col == 2 ) {
-    out_variant = wxVariant( reinterpret_cast< InternalData* >( item.GetID() )->folderPath.string(), "Path" );
+    out_variant = wxVariant( item->folderPath.string(), "Path" );
   }
 }
 
-bool RepositoryModel::HasValue( wxDataViewItem const& item, uint32_t col ) const {
+bool RepositoryModel::HasValue( wxDataViewItem const& wxdviItem, uint32_t col ) const {
+  // RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
   if( col < 3 ) {
     return true;
   }
-  if( !IsContainer( item ) ) {
+  if( !IsContainer( wxdviItem ) ) {
     return true;
   }
-  if( HasContainerColumns( item ) ) {
+  if( HasContainerColumns( wxdviItem ) ) {
     return true;
   }
   return false;
 }
 
-bool RepositoryModel::SetValue( wxVariant const& /*variant*/, wxDataViewItem const& /*item*/, uint32_t /*col*/ ) {
+bool RepositoryModel::SetValue( wxVariant const& /*variant*/, wxDataViewItem const& /*wxdviItem*/, uint32_t /*col*/ ) {
+  // RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
   return false;
 }
 
-bool RepositoryModel::GetAttr( wxDataViewItem const& /*item*/, uint32_t /*col*/, wxDataViewItemAttr& /*out_attr*/ ) const {
+bool RepositoryModel::GetAttr( wxDataViewItem const& /*wxdviItem*/, uint32_t /*col*/, wxDataViewItemAttr& /*out_attr*/ ) const {
+  // RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
   return false;
 }
 
-bool RepositoryModel::IsEnabled( wxDataViewItem const& /*item*/, uint32_t /*col*/ ) const {
+bool RepositoryModel::IsEnabled( wxDataViewItem const& /*wxdviItem*/, uint32_t /*col*/ ) const {
+  // RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
   return true;
 }
 
-wxDataViewItem RepositoryModel::GetParent( wxDataViewItem const& /*item*/ ) const {
+wxDataViewItem RepositoryModel::GetParent( wxDataViewItem const& /*wxdviItem*/ ) const {
+  // RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
   return wxDataViewItem();
 }
 
-bool RepositoryModel::IsContainer( wxDataViewItem const& item ) const {
+bool RepositoryModel::IsContainer( wxDataViewItem const& wxdviItem ) const {
+  RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
   return item.GetID() == nullptr;
 }
 
-bool RepositoryModel::HasContainerColumns( wxDataViewItem const& /*item*/ ) const {
+bool RepositoryModel::HasContainerColumns( wxDataViewItem const& /*wxdviItem*/ ) const {
+  // RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
   return false;
 }
 
-uint32_t RepositoryModel::GetChildren( wxDataViewItem const& item, wxDataViewItemArray& out_children ) const {
+uint32_t RepositoryModel::GetChildren( wxDataViewItem const& wxdviItem, wxDataViewItemArray& out_children ) const {
+  RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
+
   if( item.GetID() == nullptr ) {
-    out_children = wxDataViewItemArray( items_.begin(), items_.end() );
+    for( auto const& item : items_ ) {
+      out_children.Add( reinterpret_cast< wxDataViewItem const& >( item ) );
+    }
     return items_.size();
   } else {
     return 0;
@@ -102,41 +110,44 @@ uint32_t RepositoryModel::GetChildren( wxDataViewItem const& item, wxDataViewIte
 
 void RepositoryModel::Resort() {}
 
-int32_t RepositoryModel::Compare( wxDataViewItem const& item1, wxDataViewItem const& item2, uint32_t column, bool ascending ) const {
+int32_t RepositoryModel::Compare( wxDataViewItem const& wxdviItem1, wxDataViewItem const& wxdviItem2, uint32_t column, bool /*ascending*/ ) const {
+  RepositoryModel::Data const& item1 = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem1 );
+  RepositoryModel::Data const& item2 = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem2 );
+
+  if( !item1.IsOk() && item2.IsOk() ) {
+    return -1;
+  } else if( item1.IsOk() && !item2.IsOk() ) {
+    return 1;
+  }
+
   if( column == -1 ) {
     // default
-    InternalData& tmp1 = *reinterpret_cast< InternalData* >( item1.GetID() );
-    InternalData& tmp2 = *reinterpret_cast< InternalData* >( item2.GetID() );
-    if( tmp1.depth < tmp2.depth ) {
-      return ascending ? -1 : 1;
-    } else if( tmp1.depth > tmp2.depth ) {
-      return ascending ? 1 : -1;
+    if( item1->depth < item2->depth ) {
+      return -1;
+    } else if( item1->depth > item2->depth ) {
+      return 1;
     }
-    std::string path1 = tmp1.folderPath.string();
-    std::string path2 = tmp2.folderPath.string();
+    std::string path1 = item1->folderPath.string();
+    std::string path2 = item2->folderPath.string();
     toLower( path1 );
     toLower( path2 );
-    int tmpRet = path1.compare( path2 );
-    return ascending ? tmpRet : -tmpRet;
+    return path1.compare( path2 );
   } else if( column == 0 ) {
-    std::string tmp1 = reinterpret_cast< InternalData* >( item1.GetID() )->folderPath.filename().string();
-    std::string tmp2 = reinterpret_cast< InternalData* >( item2.GetID() )->folderPath.filename().string();
+    std::string tmp1 = item1->folderPath.filename().string();
+    std::string tmp2 = item2->folderPath.filename().string();
     toLower( tmp1 );
     toLower( tmp2 );
-    int tmpRet = tmp1.compare( tmp2 );
-    return ascending ? tmpRet : -tmpRet;
+    return tmp1.compare( tmp2 );
   } else if( column == 1 ) {
-    uint32_t tmp1 = reinterpret_cast< InternalData* >( item1.GetID() )->depth;
-    uint32_t tmp2 = reinterpret_cast< InternalData* >( item2.GetID() )->depth;
-    int tmpRet = int( tmp1 ) - int( tmp2 );
-    return ascending ? tmpRet : -tmpRet;
+    uint32_t tmp1 = item1->depth;
+    uint32_t tmp2 = item2->depth;
+    return int( tmp1 ) - int( tmp2 );
   } else if( column == 2 ) {
-    std::string tmp1 = reinterpret_cast< InternalData* >( item1.GetID() )->folderPath.string();
-    std::string tmp2 = reinterpret_cast< InternalData* >( item2.GetID() )->folderPath.string();
+    std::string tmp1 = item1->folderPath.string();
+    std::string tmp2 = item2->folderPath.string();
     toLower( tmp1 );
     toLower( tmp2 );
-    int tmpRet = tmp1.compare( tmp2 );
-    return ascending ? tmpRet : -tmpRet;
+    return tmp1.compare( tmp2 );
   }
   return 0;
 }
@@ -158,7 +169,9 @@ void RepositoryModel::ScanPath( std::filesystem::path const& path, uint32_t dept
   int error = git_repository_open( &repo, path.string().c_str() );
   if( error == 0 ) {
     // no error
-    items_.push_back( Data( new InternalData{ .depth = depth, .folderPath = path, .gitRepo = std::shared_ptr< git_repository >( repo, []( git_repository* p ) { git_repository_free( p ); } ) } ) );
+    Data tmp( new InternalData{ .depth = depth, .folderPath = path, .gitRepo = std::shared_ptr< git_repository >( repo, []( git_repository* p ) { git_repository_free( p ); } ) } );
+    items_.push_back( tmp );
+    ItemAdded( wxDataViewItem(), reinterpret_cast< wxDataViewItem const& >( tmp ) );
   } else if( error < 0 ) {
     // error
     git_error const* e = git_error_last();
