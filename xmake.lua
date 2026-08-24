@@ -40,8 +40,10 @@ target( "GitManager" )
 
     add_includedirs( "include", "$(builddir)", { public = true } )
 
-    add_headerfiles( "include/(*.hpp)" )
+    add_headerfiles( "include/(models/*.hpp)" )
     add_headerfiles( "include/(ui/*.hpp)" )
+    add_headerfiles( "include/(*.hpp)" )
 
-    add_files( "src/*.cpp" )
+    add_files( "src/models/*.cpp" )
     add_files( "src/ui/*.cpp" )
+    add_files( "src/*.cpp" )

@@ -34,7 +34,9 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   splitterWindow_ = new wxSplitterWindow( panel_ );
   leftPanel_ = new wxPanel( splitterWindow_ );
   rightPanel_ = new wxPanel( splitterWindow_ );
-  repoTreeList_ = new wxTreeListCtrl( leftPanel_, wxID_ANY );
+  // repoTreeList_ = new wxTreeListCtrl( leftPanel_, wxID_ANY );
+  repoTreeList_ = new wxDataViewCtrl( leftPanel_, wxID_ANY );
+  repoModel_ = decltype( repoModel_ )( new RepositoryModel() );
 
   wxGridSizer* panelSizer = new wxGridSizer( 1, 1, 0, 0 );
   wxGridSizer* leftPanelSizer = new wxGridSizer( 1, 1, 0, 0 );
@@ -53,7 +55,8 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   splitterWindow_->SplitVertically( leftPanel_, rightPanel_ );
   splitterWindow_->SetSashGravity( 1.0 / 3.0 );
 
-  repoTreeList_->AppendColumn( _( "Repositories" ) );
+  repoTreeList_->AssociateModel( repoModel_.get() );
+  // repoTreeList_->AppendColumn( _( "Repositories" ) );
 
   Bind( wxEVT_MENU, &MainWindow::OnOpenFolder, this, mwID_OpenFolder );
   Bind( wxEVT_MENU, &MainWindow::OnAbout, this, wxID_ABOUT );
@@ -76,47 +79,6 @@ void MainWindow::UpdateUiWithNewRepos() {
   tmp.fill( '\0' );
   snprintf( tmp.data(), tmp.size(), "%d %s", repos_.size(), _( "Repositories scanned" ).c_str().AsChar() );
   SetStatusText( tmp.data() );
-
-  splitterWindow_->UpdateSize();
-}
-
-void MainWindow::ScanForRepositories() {
-  for( git_repository* repo : repos_ ) {
-    git_repository_free( repo );
-  }
-  repos_.clear();
-  repoTreeList_->DeleteAllItems();
-
-  std::queue< std::filesystem::path > pathsToCheckForRepos;
-  pathsToCheckForRepos.push( currentBasePath_ );
-  while( !pathsToCheckForRepos.empty() ) {
-    std::filesystem::path pathToCheck = pathsToCheckForRepos.front();
-    pathsToCheckForRepos.pop();
-
-    git_repository* repo = nullptr;
-    int error = git_repository_open( &repo, pathToCheck.string().c_str() );
-    if( error == 0 ) {
-      // no error
-      repos_.push_back( repo );
-      repoTreeList_->AppendItem( repoTreeList_->GetRootItem(), pathToCheck.filename().string().c_str() );
-    } else if( error < 0 ) {
-      // error
-      git_error const* e = git_error_last();
-      wxLogDebug( "Git error at '%s': %d/%d: %s", pathToCheck.string().c_str(), error, e->klass, e->message );
-    }
-
-    for( std::filesystem::directory_entry const& dirEntry : std::filesystem::directory_iterator( pathToCheck ) ) {
-      if( !dirEntry.is_directory() ) {
-        continue;
-      }
-      if( dirEntry.path().filename() == ".git" ) {
-        continue;
-      }
-      pathsToCheckForRepos.push( dirEntry.path() );
-    }
-  }
-
-  UpdateUiWithNewRepos();
 }
 
 void MainWindow::OnOpenFolder( wxCommandEvent& event ) {
@@ -126,7 +88,9 @@ void MainWindow::OnOpenFolder( wxCommandEvent& event ) {
   }
   currentBasePath_ = openFolderDialog.GetPath().utf8_string();
 
-  ScanForRepositories();
+  repoModel_.get()->SetBasePath( currentBasePath_ );
+
+  UpdateUiWithNewRepos();
 }
 
 void MainWindow::OnAbout( wxCommandEvent& event ) {
