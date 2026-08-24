@@ -13,6 +13,7 @@ class RepositoryModel : public wxDataViewModel {
   public:
   typedef wxDataViewItem Data;
   struct InternalData {
+    uint32_t depth = 0;
     std::filesystem::path folderPath{};
     std::shared_ptr< git_repository > gitRepo = nullptr;
   };
@@ -40,7 +41,7 @@ class RepositoryModel : public wxDataViewModel {
   virtual bool IsVirtualListModel() const override;
 
   private:
-  void ScanPath( std::filesystem::path const& path );
+  void ScanPath( std::filesystem::path const& path, uint32_t depth );
 
   private:
   std::filesystem::path basePath_{};
