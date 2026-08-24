@@ -6,9 +6,6 @@
 // Library headers
 #include <wx/log.h>
 
-// C++ headers
-#include <queue>
-
 RepositoryModel::RepositoryModel() {
   Log::Trace( "RepositoryModel::RepositoryModel()" );
 }
@@ -19,33 +16,8 @@ void RepositoryModel::SetBasePath( std::filesystem::path const& basePath ) {
   ItemsDeleted( wxDataViewItem(), wxDataViewItemArray( items_.begin(), items_.end() ) );
   items_.clear();
 
-  std::queue< std::filesystem::path > pathsToCheckForRepos;
-  pathsToCheckForRepos.push( basePath_ );
-  while( !pathsToCheckForRepos.empty() ) {
-    std::filesystem::path pathToCheck = pathsToCheckForRepos.front();
-    pathsToCheckForRepos.pop();
+  ScanPath( basePath_ );
 
-    git_repository* repo = nullptr;
-    int error = git_repository_open( &repo, pathToCheck.string().c_str() );
-    if( error == 0 ) {
-      // no error
-      items_.push_back( Data( new InternalData{ .folderPath = pathToCheck, .gitRepo = std::shared_ptr< git_repository >( repo, []( git_repository* p ) { git_repository_free( p ); } ) } ) );
-    } else if( error < 0 ) {
-      // error
-      git_error const* e = git_error_last();
-      Log::Error( "Git error at '%s': %d/%d: %s", pathToCheck.string().c_str(), error, e->klass, e->message );
-    }
-
-    for( std::filesystem::directory_entry const& dirEntry : std::filesystem::directory_iterator( pathToCheck ) ) {
-      if( !dirEntry.is_directory() ) {
-        continue;
-      }
-      if( dirEntry.path().filename() == ".git" ) {
-        continue;
-      }
-      pathsToCheckForRepos.push( dirEntry.path() );
-    }
-  }
   ItemsAdded( wxDataViewItem(), wxDataViewItemArray( items_.begin(), items_.end() ) );
 }
 
@@ -138,4 +110,27 @@ bool RepositoryModel::IsListModel() const {
 bool RepositoryModel::IsVirtualListModel() const {
   Log::Trace( "RepositoryModel::IsVirtualListModel()" );
   return false;
+}
+
+void RepositoryModel::ScanPath( std::filesystem::path const& path ) {
+  git_repository* repo = nullptr;
+  int error = git_repository_open( &repo, path.string().c_str() );
+  if( error == 0 ) {
+    // no error
+    items_.push_back( Data( new InternalData{ .folderPath = path, .gitRepo = std::shared_ptr< git_repository >( repo, []( git_repository* p ) { git_repository_free( p ); } ) } ) );
+  } else if( error < 0 ) {
+    // error
+    git_error const* e = git_error_last();
+    Log::Error( "Git error at '%s': %d/%d: %s", path.string().c_str(), error, e->klass, e->message );
+  }
+
+  for( std::filesystem::directory_entry const& dirEntry : std::filesystem::directory_iterator( path ) ) {
+    if( !dirEntry.is_directory() ) {
+      continue;
+    }
+    if( dirEntry.path().filename() == ".git" ) {
+      continue;
+    }
+    ScanPath( dirEntry.path() );
+  }
 }

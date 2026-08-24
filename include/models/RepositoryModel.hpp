@@ -40,6 +40,9 @@ class RepositoryModel : public wxDataViewModel {
   virtual bool IsVirtualListModel() const override;
 
   private:
+  void ScanPath( std::filesystem::path const& path );
+
+  private:
   std::filesystem::path basePath_{};
   std::vector< Data > items_{};
 };
