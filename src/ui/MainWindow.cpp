@@ -56,6 +56,8 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   splitterWindow_->SetSashGravity( 1.0 / 3.0 );
 
   repoTreeList_->AssociateModel( repoModel_.get() );
+  repoTreeList_->AppendTextColumn( "Folder", 0 );
+  repoTreeList_->AppendTextColumn( "Path", 1 );
   // repoTreeList_->AppendColumn( _( "Repositories" ) );
 
   Bind( wxEVT_MENU, &MainWindow::OnOpenFolder, this, mwID_OpenFolder );
