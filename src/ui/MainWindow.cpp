@@ -1,11 +1,17 @@
 #include "ui/MainWindow.hpp"
 
+// Project headers
+#include <Log.hpp>
+
 // Library headers
 #include <wx/dirdlg.h>
 #include <wx/log.h>
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
+#include <wx/panel.h>
 #include <wx/sizer.h>
+#include <wx/splitter.h>
+#include <wx/stattext.h>
 
 // C++ headers
 #include <array>
@@ -27,42 +33,67 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
 
   CreateStatusBar();
 
-  panel_ = new wxPanel( this );
-  splitterWindow_ = new wxSplitterWindow( panel_ );
-  leftPanel_ = new wxPanel( splitterWindow_ );
-  rightPanel_ = new wxPanel( splitterWindow_ );
-  // repoTreeList_ = new wxTreeListCtrl( leftPanel_, wxID_ANY );
-  repoTreeList_ = new wxDataViewCtrl( leftPanel_, wxID_ANY );
+  wxPanel* panel = new wxPanel( this );
+  wxSplitterWindow* splitterWindow1 = new wxSplitterWindow( panel );
+  wxPanel* leftPanel = new wxPanel( splitterWindow1 );
+  wxPanel* rightPanel = new wxPanel( splitterWindow1 );
+  wxSplitterWindow* splitterWindow2 = new wxSplitterWindow( rightPanel );
+  wxPanel* rightLeftPanel = new wxPanel( splitterWindow2 );
+  wxPanel* rightRightPanel = new wxPanel( splitterWindow2 );
+  wxStaticText* changedFileDisplayLabel = new wxStaticText( rightLeftPanel, wxID_ANY, "Changed Files Display" );
+  wxStaticText* diffDisplayLabel = new wxStaticText( rightRightPanel, wxID_ANY, "Diff Display" );
+
+  repoTreeList_ = new wxDataViewCtrl( leftPanel, wxID_ANY );
   repoModel_ = decltype( repoModel_ )( new RepositoryModel() );
 
   wxGridSizer* panelSizer = new wxGridSizer( 1, 1, 0, 0 );
   wxGridSizer* leftPanelSizer = new wxGridSizer( 1, 1, 0, 0 );
   wxGridSizer* rightPanelSizer = new wxGridSizer( 1, 1, 0, 0 );
+  wxGridSizer* rightLeftPanelSizer = new wxGridSizer( 1, 1, 0, 0 );
+  wxGridSizer* rightRightPanelSizer = new wxGridSizer( 1, 1, 0, 0 );
 
-  panelSizer->Add( splitterWindow_, 1, wxEXPAND | wxALL );
-  panel_->SetSizer( panelSizer );
+  panelSizer->Add( splitterWindow1, 1, wxEXPAND | wxALL );
+  panel->SetSizer( panelSizer );
 
   leftPanelSizer->Add( repoTreeList_, 1, wxEXPAND | wxALL );
-  leftPanel_->SetSizer( leftPanelSizer );
+  leftPanel->SetSizer( leftPanelSizer );
 
-  // rightPanelSizer->Add( splitterWindow_, 1, wxEXPAND | wxALL );
-  rightPanel_->SetSizer( rightPanelSizer );
+  rightPanelSizer->Add( splitterWindow2, 1, wxEXPAND | wxALL );
+  rightPanel->SetSizer( rightPanelSizer );
 
-  splitterWindow_->SetSplitMode( wxSPLIT_VERTICAL );
-  splitterWindow_->SplitVertically( leftPanel_, rightPanel_ );
-  splitterWindow_->SetSashGravity( 1.0 / 3.0 );
+  rightLeftPanelSizer->Add( changedFileDisplayLabel, 1, wxEXPAND | wxALL );
+  rightLeftPanel->SetSizer( rightLeftPanelSizer );
+
+  rightRightPanelSizer->Add( diffDisplayLabel, 1, wxEXPAND | wxALL );
+  rightRightPanel->SetSizer( rightRightPanelSizer );
+
+  splitterWindow1->SetSplitMode( wxSPLIT_VERTICAL );
+  splitterWindow1->SplitVertically( leftPanel, rightPanel );
+  splitterWindow1->SetSashGravity( 1.0 / 3.0 );
+  splitterWindow1->SetMinimumPaneSize( 10 );
+
+  splitterWindow2->SetSplitMode( wxSPLIT_VERTICAL );
+  splitterWindow2->SplitVertically( rightLeftPanel, rightRightPanel );
+  splitterWindow2->SetSashGravity( 1.0 / 2.0 );
+  splitterWindow2->SetMinimumPaneSize( 10 );
 
   repoTreeList_->AssociateModel( repoModel_.get() );
   repoTreeList_->AppendTextColumn( "Folder", 0 );
   repoTreeList_->AppendTextColumn( "Depth", 1 );
   repoTreeList_->AppendTextColumn( "Path", 2 );
-  // repoTreeList_->AppendColumn( _( "Repositories" ) );
 
   Bind( wxEVT_MENU, &MainWindow::OnMenuOpenFolder, this, mwID_OpenFolder );
   Bind( wxEVT_MENU, &MainWindow::OnMenuAbout, this, wxID_ABOUT );
   Bind( wxEVT_MENU, &MainWindow::OnMenuExit, this, wxID_EXIT );
+  Bind( wxEVT_THREAD, &MainWindow::OnThreadUpdate, this );
 
   UpdateUiWithNewRepos();
+}
+
+wxThread::ExitCode MainWindow::Entry() {
+  repoModel_->SetBasePath( currentBasePath_ );
+  wxQueueEvent( GetEventHandler(), new wxThreadEvent() );
+  return wxThread::ExitCode( 0 );
 }
 
 void MainWindow::UpdateUiWithNewRepos() {
@@ -92,9 +123,15 @@ void MainWindow::OnMenuOpenFolder( wxCommandEvent& event ) {
   }
   currentBasePath_ = openFolderDialog.GetPath().utf8_string();
 
-  repoModel_->SetBasePath( currentBasePath_ );
+  if( CreateThread( wxTHREAD_JOINABLE ) != wxTHREAD_NO_ERROR ) {
+    Log::Error( "Could not create the worker thread!" );
+    return;
+  }
 
-  UpdateUiWithNewRepos();
+  if( GetThread()->Run() != wxTHREAD_NO_ERROR ) {
+    Log::Error( "Could not run the worker thread!" );
+    return;
+  }
 }
 
 void MainWindow::OnMenuAbout( wxCommandEvent& event ) {
@@ -103,4 +140,10 @@ void MainWindow::OnMenuAbout( wxCommandEvent& event ) {
 
 void MainWindow::OnMenuExit( wxCommandEvent& event ) {
   Close( true );
+}
+
+void MainWindow::OnThreadUpdate( wxThreadEvent& event ) {
+  repoModel_->SetBasePath( currentBasePath_ );
+
+  UpdateUiWithNewRepos();
 }
