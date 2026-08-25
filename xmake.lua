@@ -44,6 +44,8 @@ target( "GitManager" )
     add_headerfiles( "include/(ui/*.hpp)" )
     add_headerfiles( "include/(*.hpp)" )
 
+    add_files( "resources/*" )
+
     add_files( "src/models/*.cpp" )
     add_files( "src/ui/*.cpp" )
     add_files( "src/*.cpp" )

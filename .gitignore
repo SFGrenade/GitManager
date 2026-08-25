@@ -2,6 +2,7 @@
 vc140.pdb
 # my fault
 _build_logs/
+_dest/
 .xmake/
 
 # https://github.com/github/gitignore/blob/main/C%2B%2B.gitignore
