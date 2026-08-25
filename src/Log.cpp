@@ -1,7 +1,43 @@
 #include "Log.hpp"
 
+// C++ headers
+#include <ctime>
+
 FILE* Log::file_ = nullptr;
 
 void Log::Init() {
   file_ = fopen( "out.log", "w" );
+}
+
+void Log::LogLine( std::string const& level, std::string const& outputString ) {
+  StartLogLine( level );
+  std::fprintf( file_, outputString.c_str() );
+  EndLogLine();
+}
+
+void Log::Trace( std::string const& outputString ) {
+  return LogLine( "trace", outputString );
+}
+
+void Log::Debug( std::string const& outputString ) {
+  return LogLine( "debug", outputString );
+}
+
+void Log::Warning( std::string const& outputString ) {
+  return LogLine( "warning", outputString );
+}
+
+void Log::Error( std::string const& outputString ) {
+  return LogLine( "error", outputString );
+}
+
+void Log::StartLogLine( std::string const& level ) {
+  std::time_t currentTime = std::time( nullptr );
+  std::tm* localCurrentTime = std::localtime( &currentTime );
+  std::fprintf( file_, "[%04d-%02d-%02d %02d:%02d:%02d] [%s] ", localCurrentTime->tm_year + 1900, localCurrentTime->tm_mon + 1, localCurrentTime->tm_mday, localCurrentTime->tm_hour, localCurrentTime->tm_min, localCurrentTime->tm_sec, level.c_str() );
+}
+
+void Log::EndLogLine() {
+  std::fprintf( file_, "\n" );
+  std::fflush( file_ );
 }
