@@ -43,7 +43,7 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   wxStaticText* changedFileDisplayLabel = new wxStaticText( rightLeftPanel, wxID_ANY, "Changed Files Display" );
   wxStaticText* diffDisplayLabel = new wxStaticText( rightRightPanel, wxID_ANY, "Diff Display" );
 
-  repoTreeList_ = new wxDataViewCtrl( leftPanel, wxID_ANY );
+  repoTreeList_ = new wxDataViewCtrl( leftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE | wxDV_ROW_LINES | wxDV_NO_HEADER );
   repoModel_ = decltype( repoModel_ )( new RepositoryModel() );
 
   wxGridSizer* panelSizer = new wxGridSizer( 1, 1, 0, 0 );
@@ -79,8 +79,6 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
 
   repoTreeList_->AssociateModel( repoModel_.get() );
   repoTreeList_->AppendTextColumn( "Folder", 0 );
-  repoTreeList_->AppendTextColumn( "Depth", 1 );
-  repoTreeList_->AppendTextColumn( "Path", 2 );
 
   Bind( wxEVT_MENU, &MainWindow::OnMenuOpenFolder, this, mwID_OpenFolder );
   Bind( wxEVT_MENU, &MainWindow::OnMenuAbout, this, wxID_ABOUT );
