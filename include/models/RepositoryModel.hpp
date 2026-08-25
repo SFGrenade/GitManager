@@ -42,6 +42,7 @@ class RepositoryModel : public wxDataViewModel {
 
   private:
   void ScanPath( std::filesystem::path const& path, uint32_t depth );
+  void AddGitPath( std::filesystem::path const& path, uint32_t depth );
 
   private:
   std::filesystem::path basePath_{};

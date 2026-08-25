@@ -2,6 +2,7 @@
 
 // Project headers
 #include <Log.hpp>
+#include <filesystem>
 #include <utils.hpp>
 
 // Library headers
@@ -20,24 +21,6 @@ void RepositoryModel::SetBasePath( std::filesystem::path const& basePath ) {
   items_.clear();
 
   ScanPath( basePath_, 0 );
-  for( auto iter = std::filesystem::recursive_directory_iterator( basePath_ ); iter != std::filesystem::recursive_directory_iterator(); iter++ ) {
-    if( !std::filesystem::is_directory( *iter ) ) {
-      continue;
-    }
-    if( iter->path().filename() == ".git" ) {
-      // we don't care about git data folders
-      continue;
-    }
-    if( iter->path().filename() == ".svn" ) {
-      // we don't care about svn data folders
-      continue;
-    }
-    if( iter->path().filename().string().starts_with( "." ) ) {
-      // ignore hidden folders for now
-      continue;
-    }
-    ScanPath( iter->path(), uint32_t( iter.depth() + 1 ) );
-  }
 }
 
 void RepositoryModel::GetValue( wxVariant& out_variant, wxDataViewItem const& wxdviItem, uint32_t col ) const {
@@ -165,6 +148,32 @@ bool RepositoryModel::IsVirtualListModel() const {
 }
 
 void RepositoryModel::ScanPath( std::filesystem::path const& path, uint32_t depth ) {
+  if( std::filesystem::exists( path / ".git" ) && std::filesystem::is_directory( path / ".git" ) ) {
+    // it's a git repo
+    AddGitPath( path, depth );
+  }
+
+  for( auto iter = std::filesystem::directory_iterator( path ); iter != std::filesystem::directory_iterator(); iter++ ) {
+    if( !iter->is_directory() ) {
+      continue;
+    }
+    if( iter->path().filename() == ".git" ) {
+      // we don't care about git data folders
+      continue;
+    }
+    if( iter->path().filename() == ".svn" ) {
+      // we don't care about svn data folders
+      continue;
+    }
+    if( iter->path().filename().string().starts_with( "." ) ) {
+      // ignore hidden folders for now
+      continue;
+    }
+    ScanPath( iter->path(), uint32_t( depth + 1 ) );
+  }
+}
+
+void RepositoryModel::AddGitPath( std::filesystem::path const& path, uint32_t depth ) {
   git_repository* repo = nullptr;
   int error = git_repository_open( &repo, path.string().c_str() );
   if( error == 0 ) {
