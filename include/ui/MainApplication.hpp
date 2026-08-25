@@ -6,6 +6,7 @@
 class MainApplication : public wxApp {
   public:
   bool OnInit() override;
+  int OnExit() override;
 };
 
 // This defines the equivalent of main() for the current platform.

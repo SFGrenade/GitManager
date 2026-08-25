@@ -9,6 +9,11 @@ void Log::Init() {
   file_ = fopen( "out.log", "w" );
 }
 
+void Log::DeInit() {
+  fclose( file_ );
+  file_ = nullptr;
+}
+
 void Log::LogLine( std::string const& level, std::string const& outputString ) {
   StartLogLine( level );
   std::fprintf( file_, outputString.c_str() );

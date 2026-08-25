@@ -9,11 +9,8 @@
 
 // C++ headers
 #include <array>
-#include <queue>
 
 MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
-  git_libgit2_init();
-
   wxMenu* menuFile = new wxMenu;
   menuFile->Append( mwID_OpenFolder, _( "&Open Folder...\tCtrl+O" ) );
   menuFile->AppendSeparator();
@@ -61,9 +58,9 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   repoTreeList_->AppendTextColumn( "Path", 2 );
   // repoTreeList_->AppendColumn( _( "Repositories" ) );
 
-  Bind( wxEVT_MENU, &MainWindow::OnOpenFolder, this, mwID_OpenFolder );
-  Bind( wxEVT_MENU, &MainWindow::OnAbout, this, wxID_ABOUT );
-  Bind( wxEVT_MENU, &MainWindow::OnExit, this, wxID_EXIT );
+  Bind( wxEVT_MENU, &MainWindow::OnMenuOpenFolder, this, mwID_OpenFolder );
+  Bind( wxEVT_MENU, &MainWindow::OnMenuAbout, this, wxID_ABOUT );
+  Bind( wxEVT_MENU, &MainWindow::OnMenuExit, this, wxID_EXIT );
 
   UpdateUiWithNewRepos();
 }
@@ -80,31 +77,30 @@ void MainWindow::UpdateUiWithNewRepos() {
   SetTitle( tmp.data() );
 
   tmp.fill( '\0' );
-  snprintf( tmp.data(), tmp.size(), "%d %s", repos_.size(), _( "Repositories scanned" ).c_str().AsChar() );
+  {
+    wxDataViewItem tmpParent;
+    wxDataViewItemArray tmpChildren;
+    snprintf( tmp.data(), tmp.size(), "%d %s", repoModel_->GetChildren( tmpParent, tmpChildren ), _( "Repositories scanned" ).c_str().AsChar() );
+  }
   SetStatusText( tmp.data() );
 }
 
-void MainWindow::OnOpenFolder( wxCommandEvent& event ) {
+void MainWindow::OnMenuOpenFolder( wxCommandEvent& event ) {
   wxDirDialog openFolderDialog( this );
   if( openFolderDialog.ShowModal() == wxID_CANCEL ) {
     return;
   }
   currentBasePath_ = openFolderDialog.GetPath().utf8_string();
 
-  repoModel_.get()->SetBasePath( currentBasePath_ );
+  repoModel_->SetBasePath( currentBasePath_ );
 
   UpdateUiWithNewRepos();
 }
 
-void MainWindow::OnAbout( wxCommandEvent& event ) {
+void MainWindow::OnMenuAbout( wxCommandEvent& event ) {
   wxMessageBox( "This is a wxWidgets Hello World example", "About Hello World", wxOK | wxICON_INFORMATION );
 }
 
-void MainWindow::OnExit( wxCommandEvent& event ) {
-  for( git_repository* repo : repos_ ) {
-    git_repository_free( repo );
-  }
-  repos_.clear();
-  git_libgit2_shutdown();
+void MainWindow::OnMenuExit( wxCommandEvent& event ) {
   Close( true );
 }

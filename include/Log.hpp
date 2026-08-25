@@ -13,6 +13,7 @@ class Log {
   Log& operator=( Log&& ) = delete;
 
   static void Init();
+  static void DeInit();
 
   static void LogLine( std::string const& level, std::string const& outputString );
   template < class... T >
