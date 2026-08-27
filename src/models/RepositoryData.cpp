@@ -81,16 +81,40 @@ std::string RepositoryData::GetCurrentBranch() const {
 std::string RepositoryData::GetCurrentStatus() const {
   Log::Trace( "RepositoryData::GetCurrentStatus()" );
 
+  git_diff_options diffOpts;
+  if( int error = git_diff_options_init( &diffOpts, GIT_DIFF_OPTIONS_VERSION ); error < 0 ) {
+    PrintGitError( "git_diff_options_init", error );
+  }
+  diffOpts.flags = GIT_DIFF_NORMAL | GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_RECURSE_UNTRACKED_DIRS | GIT_DIFF_INCLUDE_TYPECHANGE | GIT_DIFF_INCLUDE_TYPECHANGE_TREES | GIT_DIFF_SKIP_BINARY_CHECK | GIT_DIFF_INCLUDE_UNREADABLE;
   git_diff* diff = nullptr;
-  if( int error = git_diff_index_to_workdir( &diff, gitRepo_.get(), nullptr, nullptr ); error < 0 ) {
+  if( int error = git_diff_index_to_workdir( &diff, gitRepo_.get(), nullptr, &diffOpts ); error < 0 ) {
     PrintGitError( "git_diff_index_to_workdir", error );
   }
 
-  std::string tmpStr;
-  if( diff == nullptr ) {
-    tmpStr = "-";
-  } else {
-    tmpStr = std::to_string( git_diff_num_deltas( diff ) );
+  size_t numUnmodified = 0;  // no changes
+  size_t numAdded = 0;       // entry does not exist in old version
+  size_t numDeleted = 0;     // entry does not exist in new version
+  size_t numModified = 0;    // entry content changed between old and new
+  size_t numRenamed = 0;     // entry was renamed between old and new
+  size_t numCopied = 0;      // entry was copied from another old entry
+  size_t numIgnored = 0;     // entry is ignored item in workdir
+  size_t numUntracked = 0;   // entry is untracked item in workdir
+  size_t numTypechange = 0;  // type of entry changed between old and new
+  size_t numUnreadable = 0;  // entry is unreadable
+  size_t numConflicted = 0;  // entry in the index is conflicted
+
+  if( diff != nullptr ) {
+    numUnmodified = git_diff_num_deltas_of_type( diff, GIT_DELTA_UNMODIFIED );
+    numAdded = git_diff_num_deltas_of_type( diff, GIT_DELTA_ADDED );
+    numDeleted = git_diff_num_deltas_of_type( diff, GIT_DELTA_DELETED );
+    numModified = git_diff_num_deltas_of_type( diff, GIT_DELTA_MODIFIED );
+    numRenamed = git_diff_num_deltas_of_type( diff, GIT_DELTA_RENAMED );
+    numCopied = git_diff_num_deltas_of_type( diff, GIT_DELTA_COPIED );
+    numIgnored = git_diff_num_deltas_of_type( diff, GIT_DELTA_IGNORED );
+    numUntracked = git_diff_num_deltas_of_type( diff, GIT_DELTA_UNTRACKED );
+    numTypechange = git_diff_num_deltas_of_type( diff, GIT_DELTA_TYPECHANGE );
+    numUnreadable = git_diff_num_deltas_of_type( diff, GIT_DELTA_UNREADABLE );
+    numConflicted = git_diff_num_deltas_of_type( diff, GIT_DELTA_CONFLICTED );
   }
 
   if( diff ) {
@@ -100,7 +124,29 @@ std::string RepositoryData::GetCurrentStatus() const {
   std::array< char, 512 > tmpBuffer;
   tmpBuffer.fill( '\0' );
 
-  return tmpStr;
+  size_t stringString = snprintf( tmpBuffer.data(),
+                                  tmpBuffer.size() - 1,
+                                  "%d %c, %d %c, %d %c, %d %c, %d %c, %d %c, %d %c, %d %c, %d %c",
+                                  numAdded,
+                                  git_diff_status_char( GIT_DELTA_ADDED ),
+                                  numDeleted,
+                                  git_diff_status_char( GIT_DELTA_DELETED ),
+                                  numModified,
+                                  git_diff_status_char( GIT_DELTA_MODIFIED ),
+                                  numRenamed,
+                                  git_diff_status_char( GIT_DELTA_RENAMED ),
+                                  numCopied,
+                                  git_diff_status_char( GIT_DELTA_COPIED ),
+                                  numUntracked,
+                                  git_diff_status_char( GIT_DELTA_UNTRACKED ),
+                                  numTypechange,
+                                  git_diff_status_char( GIT_DELTA_TYPECHANGE ),
+                                  numUnreadable,
+                                  git_diff_status_char( GIT_DELTA_UNREADABLE ),
+                                  numConflicted,
+                                  git_diff_status_char( GIT_DELTA_CONFLICTED ) );
+
+  return std::string( tmpBuffer.data(), stringString );
 }
 
 int RepositoryData::Compare( RepositoryData const& o ) const {
