@@ -1,7 +1,9 @@
 #pragma once
 
+// Project headers
+#include <models/RepositoryData.hpp>
+
 // Library headers
-#include <git2.h>
 #include <wx/dataview.h>
 
 // C++ headers
@@ -11,21 +13,8 @@
 
 class RepositoryModel : public wxDataViewModel {
   public:
-  struct InternalData {
-    uint32_t depth = 0;
-    std::filesystem::path folderPath{};
-    std::shared_ptr< git_repository > gitRepo = nullptr;
-  };
-  typedef wxItemId< InternalData* > Data;
-  enum Columns {
-    ALL = -1,
-    Folder,
-    Depth,
-    Path,
-    Branch,
-    ChangedFiles,
-    LAST
-  };
+  typedef wxItemId< RepositoryData* > Data;
+  enum Columns { ALL = -1, FolderName, Depth, Path, CurrentBranch, CurrentStatus, LAST };
 
   public:
   RepositoryModel();
@@ -50,8 +39,8 @@ class RepositoryModel : public wxDataViewModel {
   virtual bool IsVirtualListModel() const override;
 
   private:
-  void ScanPath( std::filesystem::path const& path, uint32_t depth );
-  void AddGitPath( std::filesystem::path const& path, uint32_t depth );
+  void ScanPath( std::filesystem::path const& path, uint32_t depth, int64_t& sortId );
+  void AddPath( std::filesystem::path const& path, uint32_t depth, int64_t& sortId );
 
   private:
   std::filesystem::path basePath_{};

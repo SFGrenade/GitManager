@@ -78,9 +78,11 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   splitterWindow2->SetMinimumPaneSize( 10 );
 
   repoTreeList_->AssociateModel( repoModel_.get() );
-  repoTreeList_->AppendTextColumn( "Folder", RepositoryModel::Columns::Folder );
-  repoTreeList_->AppendTextColumn( "Branch", RepositoryModel::Columns::Branch );
-  repoTreeList_->AppendTextColumn( "Changed Files", RepositoryModel::Columns::ChangedFiles );
+  repoTreeList_->AppendTextColumn( "FolderName", RepositoryModel::Columns::FolderName );
+  repoTreeList_->AppendTextColumn( "Depth", RepositoryModel::Columns::Depth );
+  repoTreeList_->AppendTextColumn( "Path", RepositoryModel::Columns::Path );
+  repoTreeList_->AppendTextColumn( "CurrentBranch", RepositoryModel::Columns::CurrentBranch );
+  repoTreeList_->AppendTextColumn( "CurrentStatus", RepositoryModel::Columns::CurrentStatus );
 
   Bind( wxEVT_MENU, &MainWindow::OnMenuOpenFolder, this, mwID_OpenFolder );
   Bind( wxEVT_MENU, &MainWindow::OnMenuAbout, this, wxID_ABOUT );

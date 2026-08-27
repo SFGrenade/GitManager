@@ -8,6 +8,9 @@
 // Library headers
 #include <wx/log.h>
 
+// C++ headers
+#include <list>
+
 RepositoryModel::RepositoryModel() {
   Log::Trace( "RepositoryModel::RepositoryModel()" );
 }
@@ -20,56 +23,23 @@ void RepositoryModel::SetBasePath( std::filesystem::path const& basePath ) {
   }
   items_.clear();
 
-  ScanPath( basePath_, 0 );
+  int64_t sortId = 1;
+  AddPath( basePath_, 0, sortId );
+  ScanPath( basePath_, 0, sortId );
 }
 
 void RepositoryModel::GetValue( wxVariant& out_variant, wxDataViewItem const& wxdviItem, uint32_t col ) const {
   RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
-  if( col == Columns::Folder ) {
-    out_variant = wxVariant( item->folderPath.filename().string(), "Folder" );
+  if( col == Columns::FolderName ) {
+    out_variant = wxVariant( item->GetFolderName(), "FolderName" );
   } else if( col == Columns::Depth ) {
-    out_variant = wxVariant( std::to_string( item->depth ), "Depth" );
+    out_variant = wxVariant( std::to_string( item->GetDepth() ), "Depth" );
   } else if( col == Columns::Path ) {
-    out_variant = wxVariant( item->folderPath.string(), "Path" );
-  } else if( col == Columns::Branch ) {
-    git_reference* ref = nullptr;
-    int error = git_repository_head( &ref, item->gitRepo.get() );
-    if( error < 0 ) {
-      // error
-      git_error const* e = git_error_last();
-      Log::Error( "Git REF error with '%s': %d/%d: %s", item->folderPath.filename().string().c_str(), error, e->klass, e->message );
-    }
-    std::string tmpStr;
-    if( ( error == GIT_ENOTFOUND ) || ( ref == nullptr ) ) {
-      tmpStr = "-";
-    } else if( git_reference_is_tag( ref ) || git_reference_is_branch( ref ) ) {
-      // branch/tag checked out, probably
-      tmpStr = git_reference_shorthand( ref );
-    } else {
-      tmpStr = git_reference_name( ref );
-    }
-    if( ref ) {
-      git_reference_free( ref );
-    }
-    out_variant = wxVariant( tmpStr, "Branch" );
-  } else if( col == Columns::ChangedFiles ) {
-    git_diff* diff = nullptr;
-    int error = git_diff_index_to_workdir( &diff, item->gitRepo.get(), nullptr, nullptr );
-    if( error < 0 ) {
-      // error
-      git_error const* e = git_error_last();
-      Log::Error( "Git DIFF error with '%s': %d/%d: %s", item->folderPath.filename().string().c_str(), error, e->klass, e->message );
-    }
-    std::string tmpStr;
-    if( diff == nullptr ) {
-      tmpStr = "-";
-    } else {
-      tmpStr = std::to_string( git_diff_num_deltas( diff ) );
-    }
-    if( diff ) {
-      git_diff_free( diff );
-    }
-    out_variant = wxVariant( tmpStr, "ChangedFiles" );
+    out_variant = wxVariant( item->GetPath(), "Path" );
+  } else if( col == Columns::CurrentBranch ) {
+    out_variant = wxVariant( item->GetCurrentBranch(), "CurrentBranch" );
+  } else if( col == Columns::CurrentStatus ) {
+    out_variant = wxVariant( item->GetCurrentStatus(), "CurrentStatus" );
   }
 }
 
@@ -143,17 +113,7 @@ int32_t RepositoryModel::Compare( wxDataViewItem const& wxdviItem1, wxDataViewIt
   }
 
   if( column == Columns::ALL ) {
-    // default
-    if( item1->depth < item2->depth ) {
-      return -1;
-    } else if( item1->depth > item2->depth ) {
-      return 1;
-    }
-    std::string path1 = item1->folderPath.string();
-    std::string path2 = item2->folderPath.string();
-    toLower( path1 );
-    toLower( path2 );
-    return path1.compare( path2 );
+    return item1->Compare( *item2.GetID() );
   }
   return 0;
 }
@@ -170,12 +130,8 @@ bool RepositoryModel::IsVirtualListModel() const {
   return false;
 }
 
-void RepositoryModel::ScanPath( std::filesystem::path const& path, uint32_t depth ) {
-  if( std::filesystem::exists( path / ".git" ) && std::filesystem::is_directory( path / ".git" ) ) {
-    // it's a git repo
-    AddGitPath( path, depth );
-  }
-
+void RepositoryModel::ScanPath( std::filesystem::path const& path, uint32_t depth, int64_t& sortId ) {
+  std::list< std::filesystem::directory_entry > entries;
   for( auto iter = std::filesystem::directory_iterator( path ); iter != std::filesystem::directory_iterator(); iter++ ) {
     if( !iter->is_directory() ) {
       continue;
@@ -192,21 +148,30 @@ void RepositoryModel::ScanPath( std::filesystem::path const& path, uint32_t dept
       // ignore hidden folders for now
       continue;
     }
-    ScanPath( iter->path(), uint32_t( depth + 1 ) );
+    entries.push_back( *iter );
+  }
+
+  entries.sort( []( std::filesystem::directory_entry const& a, std::filesystem::directory_entry const& b ) {
+    std::string tmpA = a.path().filename().string();
+    std::string tmpB = b.path().filename().string();
+    toLower( tmpA );
+    toLower( tmpB );
+    return tmpA < tmpB;
+  } );
+
+  for( auto const& entry : entries ) {
+    AddPath( entry.path(), uint32_t( depth + 1 ), sortId );
+  }
+
+  for( auto const& entry : entries ) {
+    ScanPath( entry.path(), uint32_t( depth + 1 ), sortId );
   }
 }
 
-void RepositoryModel::AddGitPath( std::filesystem::path const& path, uint32_t depth ) {
-  git_repository* repo = nullptr;
-  int error = git_repository_open( &repo, path.string().c_str() );
-  if( error == 0 ) {
-    // no error
-    Data tmp( new InternalData{ .depth = depth, .folderPath = path, .gitRepo = std::shared_ptr< git_repository >( repo, []( git_repository* p ) { git_repository_free( p ); } ) } );
+void RepositoryModel::AddPath( std::filesystem::path const& path, uint32_t depth, int64_t& sortId ) {
+  if( RepositoryData::IsAllowed( path ) ) {
+    Data tmp( new RepositoryData( sortId++, path ) );
     items_.push_back( tmp );
     ItemAdded( wxDataViewItem(), reinterpret_cast< wxDataViewItem const& >( tmp ) );
-  } else if( error < 0 ) {
-    // error
-    git_error const* e = git_error_last();
-    Log::Error( "Git error at '%s': %d/%d: %s", path.string().c_str(), error, e->klass, e->message );
   }
 }
