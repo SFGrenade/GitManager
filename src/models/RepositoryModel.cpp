@@ -25,18 +25,57 @@ void RepositoryModel::SetBasePath( std::filesystem::path const& basePath ) {
 
 void RepositoryModel::GetValue( wxVariant& out_variant, wxDataViewItem const& wxdviItem, uint32_t col ) const {
   RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
-  if( col == 0 ) {
-    out_variant = wxVariant( item->folderPath.filename().string(), "Folder Name" );
-  } else if( col == 1 ) {
+  if( col == Columns::Folder ) {
+    out_variant = wxVariant( item->folderPath.filename().string(), "Folder" );
+  } else if( col == Columns::Depth ) {
     out_variant = wxVariant( std::to_string( item->depth ), "Depth" );
-  } else if( col == 2 ) {
+  } else if( col == Columns::Path ) {
     out_variant = wxVariant( item->folderPath.string(), "Path" );
+  } else if( col == Columns::Branch ) {
+    git_reference* ref = nullptr;
+    int error = git_repository_head( &ref, item->gitRepo.get() );
+    if( error < 0 ) {
+      // error
+      git_error const* e = git_error_last();
+      Log::Error( "Git REF error with '%s': %d/%d: %s", item->folderPath.filename().string().c_str(), error, e->klass, e->message );
+    }
+    std::string tmpStr;
+    if( ( error == GIT_ENOTFOUND ) || ( ref == nullptr ) ) {
+      tmpStr = "-";
+    } else if( git_reference_is_tag( ref ) || git_reference_is_branch( ref ) ) {
+      // branch/tag checked out, probably
+      tmpStr = git_reference_shorthand( ref );
+    } else {
+      tmpStr = git_reference_name( ref );
+    }
+    if( ref ) {
+      git_reference_free( ref );
+    }
+    out_variant = wxVariant( tmpStr, "Branch" );
+  } else if( col == Columns::ChangedFiles ) {
+    git_diff* diff = nullptr;
+    int error = git_diff_index_to_workdir( &diff, item->gitRepo.get(), nullptr, nullptr );
+    if( error < 0 ) {
+      // error
+      git_error const* e = git_error_last();
+      Log::Error( "Git DIFF error with '%s': %d/%d: %s", item->folderPath.filename().string().c_str(), error, e->klass, e->message );
+    }
+    std::string tmpStr;
+    if( diff == nullptr ) {
+      tmpStr = "-";
+    } else {
+      tmpStr = std::to_string( git_diff_num_deltas( diff ) );
+    }
+    if( diff ) {
+      git_diff_free( diff );
+    }
+    out_variant = wxVariant( tmpStr, "ChangedFiles" );
   }
 }
 
 bool RepositoryModel::HasValue( wxDataViewItem const& wxdviItem, uint32_t col ) const {
   // RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
-  if( col < 3 ) {
+  if( col < Columns::LAST ) {
     return true;
   }
   if( !IsContainer( wxdviItem ) ) {
@@ -103,7 +142,7 @@ int32_t RepositoryModel::Compare( wxDataViewItem const& wxdviItem1, wxDataViewIt
     return 1;
   }
 
-  if( column == -1 ) {
+  if( column == Columns::ALL ) {
     // default
     if( item1->depth < item2->depth ) {
       return -1;
@@ -115,22 +154,6 @@ int32_t RepositoryModel::Compare( wxDataViewItem const& wxdviItem1, wxDataViewIt
     toLower( path1 );
     toLower( path2 );
     return path1.compare( path2 );
-  } else if( column == 0 ) {
-    std::string tmp1 = item1->folderPath.filename().string();
-    std::string tmp2 = item2->folderPath.filename().string();
-    toLower( tmp1 );
-    toLower( tmp2 );
-    return tmp1.compare( tmp2 );
-  } else if( column == 1 ) {
-    uint32_t tmp1 = item1->depth;
-    uint32_t tmp2 = item2->depth;
-    return int( tmp1 ) - int( tmp2 );
-  } else if( column == 2 ) {
-    std::string tmp1 = item1->folderPath.string();
-    std::string tmp2 = item2->folderPath.string();
-    toLower( tmp1 );
-    toLower( tmp2 );
-    return tmp1.compare( tmp2 );
   }
   return 0;
 }

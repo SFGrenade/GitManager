@@ -17,6 +17,15 @@ class RepositoryModel : public wxDataViewModel {
     std::shared_ptr< git_repository > gitRepo = nullptr;
   };
   typedef wxItemId< InternalData* > Data;
+  enum Columns {
+    ALL = -1,
+    Folder,
+    Depth,
+    Path,
+    Branch,
+    ChangedFiles,
+    LAST
+  };
 
   public:
   RepositoryModel();

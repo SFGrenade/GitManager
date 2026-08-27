@@ -43,7 +43,7 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   wxStaticText* changedFileDisplayLabel = new wxStaticText( rightLeftPanel, wxID_ANY, "Changed Files Display" );
   wxStaticText* diffDisplayLabel = new wxStaticText( rightRightPanel, wxID_ANY, "Diff Display" );
 
-  repoTreeList_ = new wxDataViewCtrl( leftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE | wxDV_ROW_LINES | wxDV_NO_HEADER );
+  repoTreeList_ = new wxDataViewCtrl( leftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE | wxDV_ROW_LINES /*| wxDV_NO_HEADER*/ );
   repoModel_ = decltype( repoModel_ )( new RepositoryModel() );
 
   wxGridSizer* panelSizer = new wxGridSizer( 1, 1, 0, 0 );
@@ -78,12 +78,16 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   splitterWindow2->SetMinimumPaneSize( 10 );
 
   repoTreeList_->AssociateModel( repoModel_.get() );
-  repoTreeList_->AppendTextColumn( "Folder", 0 );
+  repoTreeList_->AppendTextColumn( "Folder", RepositoryModel::Columns::Folder );
+  repoTreeList_->AppendTextColumn( "Branch", RepositoryModel::Columns::Branch );
+  repoTreeList_->AppendTextColumn( "Changed Files", RepositoryModel::Columns::ChangedFiles );
 
   Bind( wxEVT_MENU, &MainWindow::OnMenuOpenFolder, this, mwID_OpenFolder );
   Bind( wxEVT_MENU, &MainWindow::OnMenuAbout, this, wxID_ABOUT );
   Bind( wxEVT_MENU, &MainWindow::OnMenuExit, this, wxID_EXIT );
   Bind( wxEVT_THREAD, &MainWindow::OnThreadUpdate, this );
+  Bind( wxEVT_DATAVIEW_SELECTION_CHANGED, &MainWindow::OnRepoListSelectionChanged, this, repoTreeList_->GetId() );
+  Bind( wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, &MainWindow::OnRepoListItemContextMenu, this, repoTreeList_->GetId() );
 
   UpdateUiWithNewRepos();
 }
@@ -144,4 +148,22 @@ void MainWindow::OnThreadUpdate( wxThreadEvent& event ) {
   repoModel_->SetBasePath( currentBasePath_ );
 
   UpdateUiWithNewRepos();
+}
+
+void MainWindow::OnRepoListSelectionChanged( wxDataViewEvent& event ) {
+  // wxEVT_DATAVIEW_SELECTION_CHANGED -> event.GetItem()
+  wxDataViewItem item = event.GetItem();
+  if( !item.IsOk() ) {
+    return;
+  }
+  Log::Debug( "MainWindow::OnRepoListSelectionChanged - item: %p", item.GetID() );
+}
+
+void MainWindow::OnRepoListItemContextMenu( wxDataViewEvent& event ) {
+  // wxEVT_DATAVIEW_ITEM_CONTEXT_MENU -> event.GetItem()
+  wxDataViewItem item = event.GetItem();
+  if( !item.IsOk() ) {
+    return;
+  }
+  Log::Debug( "MainWindow::OnRepoListItemContextMenu - item: %p", item.GetID() );
 }

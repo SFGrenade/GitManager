@@ -27,6 +27,8 @@ class MainWindow : public wxFrame, public wxThreadHelper {
   void OnMenuAbout( wxCommandEvent& event );
   void OnMenuExit( wxCommandEvent& event );
   void OnThreadUpdate( wxThreadEvent& event );
+  void OnRepoListSelectionChanged( wxDataViewEvent& event );
+  void OnRepoListItemContextMenu( wxDataViewEvent& event );
 
   private:
   wxDataViewCtrl* repoTreeList_ = nullptr;
