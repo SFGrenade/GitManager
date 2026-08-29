@@ -45,6 +45,10 @@ void DiffModel::SetRepository( RepositoryData* repository ) {
   }
 }
 
+std::shared_ptr< git_diff > DiffModel::GetDiff() const {
+  return diff_;
+}
+
 void DiffModel::GetValue( wxVariant& out_variant, wxDataViewItem const& wxdviItem, uint32_t col ) const {
   DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
   if( col == Columns::Path ) {

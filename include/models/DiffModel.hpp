@@ -20,6 +20,7 @@ class DiffModel : public wxDataViewModel {
   DiffModel();
 
   void SetRepository( RepositoryData* repository );
+  std::shared_ptr< git_diff > GetDiff() const;
 
   // overrides
   public:
