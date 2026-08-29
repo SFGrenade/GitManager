@@ -10,7 +10,7 @@
 bool MainApplication::OnInit() {
   // Set up Log
   Log::Init();
-  Log::SetLevel( Log::Level::Debug );
+  // Log::SetLevel( Log::Level::Debug );
 
   git_libgit2_init();
 
