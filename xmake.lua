@@ -19,7 +19,7 @@ if is_plat( "windows" ) then
 else
 end
 
-set_warnings( "everything" )
+set_warnings( "allextra" )
 
 add_requireconfs( "**", "*.**", { system = false } )
 add_requireconfs( "*", { configs = { shared = get_config( "kind" ) == "shared" } } )
