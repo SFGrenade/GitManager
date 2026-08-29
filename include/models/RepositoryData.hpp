@@ -39,6 +39,7 @@ class RepositoryData {
   std::string GetPath() const;
   std::string GetCurrentBranch() const;
   std::string GetCurrentStatus() const;
+  std::shared_ptr< git_repository > GetRepo() const;
 
   int Compare( RepositoryData const& o ) const;
 

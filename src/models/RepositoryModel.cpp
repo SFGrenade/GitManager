@@ -2,11 +2,7 @@
 
 // Project headers
 #include <Log.hpp>
-#include <filesystem>
 #include <utils.hpp>
-
-// Library headers
-#include <wx/log.h>
 
 // C++ headers
 #include <list>

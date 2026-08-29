@@ -24,7 +24,7 @@ bool RepositoryData::IsAllowed( std::filesystem::path const& path ) {
 }
 
 RepositoryData::RepositoryData( int64_t sortId, std::filesystem::path const& path ) : sortId_( sortId ), folderPath_( std::filesystem::absolute( path ) ) {
-  Log::Trace( "RepositoryData::RepositoryData( path: '%s' )", path.string().c_str() );
+  Log::Trace( "RepositoryData::RepositoryData( sortId: %d, path: '%s' )", sortId, path.string().c_str() );
 
   git_repository* repo = nullptr;
   if( int error = git_repository_open( &repo, folderPath_.string().c_str() ); error < 0 ) {
@@ -305,6 +305,12 @@ std::string RepositoryData::GetCurrentStatus() const {
                                          git_diff_status_char( GIT_DELTA_CONFLICTED ) );
 
   return std::string( tmpBuffer.data(), formattedStringSize );
+}
+
+std::shared_ptr< git_repository > RepositoryData::GetRepo() const {
+  Log::Trace( "RepositoryData::GetRepo()" );
+
+  return gitRepo_;
 }
 
 int RepositoryData::Compare( RepositoryData const& o ) const {
