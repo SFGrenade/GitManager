@@ -15,6 +15,25 @@ class RepositoryData {
   public:
   explicit RepositoryData( int64_t sortId, std::filesystem::path const& path );
 
+  public:
+  /* git functionality */
+  void GetDiffOfFile( std::filesystem::path const& path );  // todo: fixme: how should this look?
+  void TrackFile( std::filesystem::path const& path );      // todo: fixme: how should this look?
+  void UntrackFile( std::filesystem::path const& path );    // todo: fixme: how should this look?
+  void RevertFile( std::filesystem::path const& path );     // todo: fixme: how should this look?
+  void StageFile( std::filesystem::path const& path );      // todo: fixme: how should this look?
+  void UnstageFile( std::filesystem::path const& path );    // todo: fixme: how should this look?
+
+  void Fetch();   // todo: fixme: how should this look?
+  void Pull();    // todo: fixme: how should this look?
+  void Commit();  // todo: fixme: how should this look?
+  void Push();    // todo: fixme: how should this look?
+
+  void CreateBranch( std::string const& branchName );    // todo: fixme: how should this look?
+  void CheckoutBranch( std::string const& branchName );  // todo: fixme: how should this look?
+  void DeleteBranch( std::string const& branchName );    // todo: fixme: how should this look?
+  /* git functionality */
+
   std::string GetFolderName() const;
   size_t GetDepth() const;
   std::string GetPath() const;

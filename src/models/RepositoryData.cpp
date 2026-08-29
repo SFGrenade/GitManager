@@ -7,7 +7,9 @@
 
 // C++ headers
 #include <array>
+#include <functional>
 #include <iterator>
+#include <string>
 
 bool RepositoryData::IsAllowed( std::filesystem::path const& path ) {
   // check for git repository
@@ -33,6 +35,144 @@ RepositoryData::RepositoryData( int64_t sortId, std::filesystem::path const& pat
     if( p )
       git_repository_free( p );
   } );
+}
+
+void RepositoryData::GetDiffOfFile( std::filesystem::path const& path ) {
+  Log::Trace( "RepositoryData::GetDiffOfFile( path: '%s' )", path.string().c_str() );
+
+  RAW_PTR_TO_SHARED_PTR( git_index, index, git_index_free, git_repository_index, &r_index, gitRepo_.get() );
+
+  git_diff_options diffOpts;
+  if( int error = git_diff_options_init( &diffOpts, GIT_DIFF_OPTIONS_VERSION ); error < 0 ) {
+    PrintGitError( "git_diff_options_init", error );
+    return;
+  }
+  diffOpts.flags = GIT_DIFF_NORMAL | GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_RECURSE_UNTRACKED_DIRS | GIT_DIFF_INCLUDE_TYPECHANGE | GIT_DIFF_INCLUDE_TYPECHANGE_TREES | GIT_DIFF_SKIP_BINARY_CHECK | GIT_DIFF_INCLUDE_UNREADABLE;
+
+  RAW_PTR_TO_SHARED_PTR( git_diff, diff, git_diff_free, git_diff_index_to_workdir, &r_diff, gitRepo_.get(), index.get(), &diffOpts );
+
+  std::function< std::string( git_delta_t ) > deltaType2String = []( git_delta_t type ) {
+    switch( type ) {
+      case GIT_DELTA_UNMODIFIED:
+        return "Unmodified";
+      case GIT_DELTA_ADDED:
+        return "Added";
+      case GIT_DELTA_DELETED:
+        return "Deleted";
+      case GIT_DELTA_MODIFIED:
+        return "Modified";
+      case GIT_DELTA_RENAMED:
+        return "Renamed";
+      case GIT_DELTA_COPIED:
+        return "Copied";
+      case GIT_DELTA_IGNORED:
+        return "Ignored";
+      case GIT_DELTA_UNTRACKED:
+        return "Untracked";
+      case GIT_DELTA_TYPECHANGE:
+        return "Typechange";
+      case GIT_DELTA_UNREADABLE:
+        return "Unreadable";
+      case GIT_DELTA_CONFLICTED:
+        return "Conflicted";
+      default:
+        return "Unknown";
+    }
+  };
+
+  size_t amountOfDeltas = git_diff_num_deltas( diff.get() );
+  size_t correctDelta = 0;
+  for( correctDelta = 0; correctDelta < amountOfDeltas; correctDelta++ ) {
+    git_diff_delta const* delta = git_diff_get_delta( diff.get(), correctDelta );
+    Log::Debug( "RepositoryData::GetDiffOfFile - status: %s", deltaType2String( delta->status ).c_str() );
+    Log::Debug( "RepositoryData::GetDiffOfFile - flags: %d", delta->flags );
+    Log::Debug( "RepositoryData::GetDiffOfFile - similarity: %d", delta->similarity );
+    Log::Debug( "RepositoryData::GetDiffOfFile - nfiles: %d", delta->nfiles );
+    Log::Debug( "RepositoryData::GetDiffOfFile - old_file - id: %s", std::string( reinterpret_cast< char const* >( delta->old_file.id.id ), GIT_OID_MAX_SIZE ).c_str() );
+    Log::Debug( "RepositoryData::GetDiffOfFile - old_file - path: %s", delta->old_file.path );
+    Log::Debug( "RepositoryData::GetDiffOfFile - old_file - size: %d", delta->old_file.size );
+    Log::Debug( "RepositoryData::GetDiffOfFile - old_file - flags: %d", delta->old_file.flags );
+    Log::Debug( "RepositoryData::GetDiffOfFile - old_file - mode: %d", delta->old_file.mode );
+    Log::Debug( "RepositoryData::GetDiffOfFile - old_file - id_abbrev: %d", delta->old_file.id_abbrev );
+    Log::Debug( "RepositoryData::GetDiffOfFile - new_file - id: %s", std::string( reinterpret_cast< char const* >( delta->new_file.id.id ), GIT_OID_MAX_SIZE ).c_str() );
+    Log::Debug( "RepositoryData::GetDiffOfFile - new_file - path: %s", delta->new_file.path );
+    Log::Debug( "RepositoryData::GetDiffOfFile - new_file - size: %d", delta->new_file.size );
+    Log::Debug( "RepositoryData::GetDiffOfFile - new_file - flags: %d", delta->new_file.flags );
+    Log::Debug( "RepositoryData::GetDiffOfFile - new_file - mode: %d", delta->new_file.mode );
+    Log::Debug( "RepositoryData::GetDiffOfFile - new_file - id_abbrev: %d", delta->new_file.id_abbrev );
+  }
+}
+
+void RepositoryData::TrackFile( std::filesystem::path const& path ) {
+  Log::Trace( "RepositoryData::TrackFile( path: '%s' )", path.string().c_str() );
+
+  RAW_PTR_TO_SHARED_PTR( git_index, index, git_index_free, git_repository_index, &r_index, gitRepo_.get() );
+
+  if( int error = git_index_add_bypath( index.get(), path.string().c_str() ); error < 0 ) {
+    PrintGitError( "git_index_add_bypath", error );
+    return;
+  }
+}
+
+void RepositoryData::UntrackFile( std::filesystem::path const& path ) {
+  Log::Trace( "RepositoryData::UntrackFile( path: '%s' )", path.string().c_str() );
+
+  RAW_PTR_TO_SHARED_PTR( git_index, index, git_index_free, git_repository_index, &r_index, gitRepo_.get() );
+
+  if( int error = git_index_remove_bypath( index.get(), path.string().c_str() ); error < 0 ) {
+    PrintGitError( "git_index_remove_bypath", error );
+    return;
+  }
+}
+
+void RepositoryData::RevertFile( std::filesystem::path const& path ) {
+  Log::Trace( "RepositoryData::RevertFile( path: '%s' )", path.string().c_str() );
+  // todo: fixme: function signature and implementation
+}
+
+void RepositoryData::StageFile( std::filesystem::path const& path ) {
+  Log::Trace( "RepositoryData::StageFile( path: '%s' )", path.string().c_str() );
+  // todo: fixme: function signature and implementation
+}
+
+void RepositoryData::UnstageFile( std::filesystem::path const& path ) {
+  Log::Trace( "RepositoryData::UnstageFile( path: '%s' )", path.string().c_str() );
+  // todo: fixme: function signature and implementation
+}
+
+void RepositoryData::Fetch() {
+  Log::Trace( "RepositoryData::Fetch()" );
+  // todo: fixme: function signature and implementation
+}
+
+void RepositoryData::Pull() {
+  Log::Trace( "RepositoryData::Pull()" );
+  // todo: fixme: function signature and implementation
+}
+
+void RepositoryData::Commit() {
+  Log::Trace( "RepositoryData::Commit()" );
+  // todo: fixme: function signature and implementation
+}
+
+void RepositoryData::Push() {
+  Log::Trace( "RepositoryData::Push()" );
+  // todo: fixme: function signature and implementation
+}
+
+void RepositoryData::CreateBranch( std::string const& branchName ) {
+  Log::Trace( "RepositoryData::CreateBranch( branchName: '%s' )", branchName.c_str() );
+  // todo: fixme: function signature and implementation
+}
+
+void RepositoryData::CheckoutBranch( std::string const& branchName ) {
+  Log::Trace( "RepositoryData::CheckoutBranch( branchName: '%s' )", branchName.c_str() );
+  // todo: fixme: function signature and implementation
+}
+
+void RepositoryData::DeleteBranch( std::string const& branchName ) {
+  Log::Trace( "RepositoryData::DeleteBranch( branchName: '%s' )", branchName.c_str() );
+  // todo: fixme: function signature and implementation
 }
 
 std::string RepositoryData::GetFolderName() const {
@@ -62,19 +202,37 @@ std::string RepositoryData::GetCurrentBranch() const {
     PrintGitError( "git_repository_head", error );
   }
 
+  std::function< std::string( git_reference_t ) > getNameFromRefType = []( git_reference_t type ) {
+    switch( type ) {
+      case GIT_REFERENCE_INVALID:
+        return "Invalid";
+      case GIT_REFERENCE_DIRECT:
+        return "Direct";
+      case GIT_REFERENCE_SYMBOLIC:
+        return "Symbolic";
+      case GIT_REFERENCE_ALL:
+        return "All";
+      default:
+        return "Unkown";
+    }
+  };
+
   std::string tmpStr;
   if( ( error == GIT_ENOTFOUND ) || ( ref == nullptr ) ) {
     tmpStr = "-";
   } else if( git_reference_is_tag( ref ) || git_reference_is_branch( ref ) ) {
     // branch/tag checked out, probably
     tmpStr = git_reference_shorthand( ref );
+    // tmpStr += " (" + getNameFromRefType( git_reference_type( ref ) ) + ")";
   } else {
     tmpStr = git_reference_name( ref );
+    // tmpStr += " (" + getNameFromRefType( git_reference_type( ref ) ) + ")";
   }
 
   if( ref ) {
     git_reference_free( ref );
   }
+
   return tmpStr;
 }
 
@@ -124,29 +282,29 @@ std::string RepositoryData::GetCurrentStatus() const {
   std::array< char, 512 > tmpBuffer;
   tmpBuffer.fill( '\0' );
 
-  size_t stringString = snprintf( tmpBuffer.data(),
-                                  tmpBuffer.size() - 1,
-                                  "%d %c, %d %c, %d %c, %d %c, %d %c, %d %c, %d %c, %d %c, %d %c",
-                                  numAdded,
-                                  git_diff_status_char( GIT_DELTA_ADDED ),
-                                  numDeleted,
-                                  git_diff_status_char( GIT_DELTA_DELETED ),
-                                  numModified,
-                                  git_diff_status_char( GIT_DELTA_MODIFIED ),
-                                  numRenamed,
-                                  git_diff_status_char( GIT_DELTA_RENAMED ),
-                                  numCopied,
-                                  git_diff_status_char( GIT_DELTA_COPIED ),
-                                  numUntracked,
-                                  git_diff_status_char( GIT_DELTA_UNTRACKED ),
-                                  numTypechange,
-                                  git_diff_status_char( GIT_DELTA_TYPECHANGE ),
-                                  numUnreadable,
-                                  git_diff_status_char( GIT_DELTA_UNREADABLE ),
-                                  numConflicted,
-                                  git_diff_status_char( GIT_DELTA_CONFLICTED ) );
+  size_t formattedStringSize = snprintf( tmpBuffer.data(),
+                                         tmpBuffer.size() - 1,
+                                         "%d %c, %d %c, %d %c, %d %c, %d %c, %d %c, %d %c, %d %c, %d %c",
+                                         numAdded,
+                                         git_diff_status_char( GIT_DELTA_ADDED ),
+                                         numDeleted,
+                                         git_diff_status_char( GIT_DELTA_DELETED ),
+                                         numModified,
+                                         git_diff_status_char( GIT_DELTA_MODIFIED ),
+                                         numRenamed,
+                                         git_diff_status_char( GIT_DELTA_RENAMED ),
+                                         numCopied,
+                                         git_diff_status_char( GIT_DELTA_COPIED ),
+                                         numUntracked,
+                                         git_diff_status_char( GIT_DELTA_UNTRACKED ),
+                                         numTypechange,
+                                         git_diff_status_char( GIT_DELTA_TYPECHANGE ),
+                                         numUnreadable,
+                                         git_diff_status_char( GIT_DELTA_UNREADABLE ),
+                                         numConflicted,
+                                         git_diff_status_char( GIT_DELTA_CONFLICTED ) );
 
-  return std::string( tmpBuffer.data(), stringString );
+  return std::string( tmpBuffer.data(), formattedStringSize );
 }
 
 int RepositoryData::Compare( RepositoryData const& o ) const {
