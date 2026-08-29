@@ -9,6 +9,8 @@ DiffModel::DiffModel() {
 }
 
 void DiffModel::SetRepository( RepositoryData* repository ) {
+  Log::Trace( "DiffModel::SetRepository( repository: %p )", repository );
+
   repository_ = repository;
 
   for( auto const& item : items_ ) {
@@ -46,11 +48,15 @@ void DiffModel::SetRepository( RepositoryData* repository ) {
 }
 
 std::shared_ptr< git_diff > DiffModel::GetDiff() const {
+  Log::Trace( "DiffModel::GetDiff()" );
+
   return diff_;
 }
 
-void DiffModel::GetValue( wxVariant& out_variant, wxDataViewItem const& wxdviItem, uint32_t col ) const {
-  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
+void DiffModel::GetValue( wxVariant& out_variant, wxDataViewItem const& wxdvItem, uint32_t col ) const {
+  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdvItem );
+  Log::Trace( "DiffModel::GetValue( out_variant, item: '%s', col: %d )", item->GetPath().c_str(), col );
+
   if( col == Columns::Path ) {
     out_variant = wxVariant( item->GetPath(), "Path" );
   } else if( col == Columns::Status ) {
@@ -58,52 +64,67 @@ void DiffModel::GetValue( wxVariant& out_variant, wxDataViewItem const& wxdviIte
   }
 }
 
-bool DiffModel::HasValue( wxDataViewItem const& wxdviItem, uint32_t col ) const {
-  // DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
+bool DiffModel::HasValue( wxDataViewItem const& wxdvItem, uint32_t col ) const {
+  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdvItem );
+  Log::Trace( "DiffModel::HasValue( item: '%s', col: %d )", item->GetPath().c_str(), col );
+
   if( col < Columns::LAST ) {
     return true;
   }
-  if( !IsContainer( wxdviItem ) ) {
+  if( !IsContainer( wxdvItem ) ) {
     return true;
   }
-  if( HasContainerColumns( wxdviItem ) ) {
+  if( HasContainerColumns( wxdvItem ) ) {
     return true;
   }
   return false;
 }
 
-bool DiffModel::SetValue( wxVariant const& /*variant*/, wxDataViewItem const& /*wxdviItem*/, uint32_t /*col*/ ) {
-  // DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
+bool DiffModel::SetValue( wxVariant const& variant, wxDataViewItem const& wxdvItem, uint32_t col ) {
+  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdvItem );
+  Log::Trace( "DiffModel::SetValue( variant: (%s), item: '%s', col: %d )", variant.GetType().c_str().AsChar(), item->GetPath().c_str(), col );
+
   return false;
 }
 
-bool DiffModel::GetAttr( wxDataViewItem const& /*wxdviItem*/, uint32_t /*col*/, wxDataViewItemAttr& /*out_attr*/ ) const {
-  // DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
+bool DiffModel::GetAttr( wxDataViewItem const& wxdvItem, uint32_t col, wxDataViewItemAttr& out_attr ) const {
+  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdvItem );
+  Log::Trace( "DiffModel::GetAttr( item: '%s', col: %d, out_attr )", item->GetPath().c_str(), col );
+
   return false;
 }
 
-bool DiffModel::IsEnabled( wxDataViewItem const& /*wxdviItem*/, uint32_t /*col*/ ) const {
-  // DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
+bool DiffModel::IsEnabled( wxDataViewItem const& wxdvItem, uint32_t col ) const {
+  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdvItem );
+  Log::Trace( "DiffModel::IsEnabled( item: '%s', col: %d )", item->GetPath().c_str(), col );
+
   return true;
 }
 
-wxDataViewItem DiffModel::GetParent( wxDataViewItem const& /*wxdviItem*/ ) const {
-  // DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
+wxDataViewItem DiffModel::GetParent( wxDataViewItem const& wxdvItem ) const {
+  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdvItem );
+  Log::Trace( "DiffModel::GetParent( item: '%s' )", item->GetPath().c_str() );
+
   return wxDataViewItem();
 }
 
-bool DiffModel::IsContainer( wxDataViewItem const& wxdviItem ) const {
-  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
+bool DiffModel::IsContainer( wxDataViewItem const& wxdvItem ) const {
+  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdvItem );
+  Log::Trace( "DiffModel::IsContainer( item: '%s' )", item->GetPath().c_str() );
+
   return item.GetID() == nullptr;
 }
 
-bool DiffModel::HasContainerColumns( wxDataViewItem const& /*wxdviItem*/ ) const {
-  // DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
+bool DiffModel::HasContainerColumns( wxDataViewItem const& wxdvItem ) const {
+  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdvItem );
+  Log::Trace( "DiffModel::HasContainerColumns( item: '%s' )", item->GetPath().c_str() );
+
   return false;
 }
 
-uint32_t DiffModel::GetChildren( wxDataViewItem const& wxdviItem, wxDataViewItemArray& out_children ) const {
-  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdviItem );
+uint32_t DiffModel::GetChildren( wxDataViewItem const& wxdvItem, wxDataViewItemArray& out_children ) const {
+  DiffModel::Data const& item = reinterpret_cast< DiffModel::Data const& >( wxdvItem );
+  Log::Trace( "DiffModel::GetChildren( item: '%s', out_children )", item->GetPath().c_str() );
 
   if( item.GetID() == nullptr ) {
     for( auto const& item : items_ ) {
@@ -115,11 +136,15 @@ uint32_t DiffModel::GetChildren( wxDataViewItem const& wxdviItem, wxDataViewItem
   }
 }
 
-void DiffModel::Resort() {}
+void DiffModel::Resort() {
+  Log::Trace( "DiffModel::Resort()" );
+}
 
-int32_t DiffModel::Compare( wxDataViewItem const& wxdviItem1, wxDataViewItem const& wxdviItem2, uint32_t column, bool /*ascending*/ ) const {
-  DiffModel::Data const& item1 = reinterpret_cast< DiffModel::Data const& >( wxdviItem1 );
-  DiffModel::Data const& item2 = reinterpret_cast< DiffModel::Data const& >( wxdviItem2 );
+int32_t DiffModel::Compare( wxDataViewItem const& wxdvItem1, wxDataViewItem const& wxdvItem2, uint32_t column, bool ascending ) const {
+  DiffModel::Data const& item1 = reinterpret_cast< DiffModel::Data const& >( wxdvItem1 );
+  DiffModel::Data const& item2 = reinterpret_cast< DiffModel::Data const& >( wxdvItem2 );
+  Log::Trace( "DiffModel::Compare( item1: '%s', item2: '%s', column: %d, ascending: %d )", item1->GetPath().c_str(), item2->GetPath().c_str(), column, ascending );
+
 
   if( !item1.IsOk() && item2.IsOk() ) {
     return -1;
@@ -127,26 +152,33 @@ int32_t DiffModel::Compare( wxDataViewItem const& wxdviItem1, wxDataViewItem con
     return 1;
   }
 
-  if( column == Columns::ALL ) {
+  if( column == static_cast< decltype( column ) >( Columns::ALL ) ) {
     return item1->Compare( *item2.GetID() );
   }
   return 0;
 }
 
 bool DiffModel::HasDefaultCompare() const {
+  Log::Trace( "DiffModel::HasDefaultCompare()" );
+
   return true;
 }
 
 bool DiffModel::IsListModel() const {
+  Log::Trace( "DiffModel::IsListModel()" );
+
   return false;
 }
 
 bool DiffModel::IsVirtualListModel() const {
+  Log::Trace( "DiffModel::IsVirtualListModel()" );
+
   return false;
 }
 
 int DiffModel::GitDiffFileForeach( git_diff_delta const* delta, float progress, void* user ) {
   Log::Trace( "DiffModel::GitDiffFileForeach( delta: %p, progress: %f, user: %p )", delta, progress, user );
+
   DiffModel* self = reinterpret_cast< DiffModel* >( user );
 
   Data tmp( new DiffData( self->sortId_++, delta ) );

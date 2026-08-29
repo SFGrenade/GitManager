@@ -16,6 +16,8 @@
 #include <array>
 
 MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
+  Log::Trace( "MainWindow::MainWindow()" );
+
   wxMenu* menuFile = new wxMenu();
   menuFile->Append( mwID_OpenFolder, _( "&Open Folder...\tCtrl+O" ) );
   menuFile->AppendSeparator();
@@ -132,12 +134,16 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
 }
 
 wxThread::ExitCode MainWindow::Entry() {
+  Log::Trace( "MainWindow::Entry()" );
+
   repoModel_->SetBasePath( currentBasePath_ );
   wxQueueEvent( GetEventHandler(), new wxThreadEvent() );
   return wxThread::ExitCode( 0 );
 }
 
 void MainWindow::UpdateUiWithNewRepos() {
+  Log::Trace( "MainWindow::UpdateUiWithNewRepos()" );
+
   std::array< char, 256 > tmp;
 
   tmp.fill( '\0' );
@@ -158,6 +164,8 @@ void MainWindow::UpdateUiWithNewRepos() {
 }
 
 void MainWindow::OnMenuOpenFolder( wxCommandEvent& event ) {
+  Log::Trace( "MainWindow::OnMenuOpenFolder( event )" );
+
   wxDirDialog openFolderDialog( this );
   if( openFolderDialog.ShowModal() == wxID_CANCEL ) {
     return;
@@ -176,41 +184,53 @@ void MainWindow::OnMenuOpenFolder( wxCommandEvent& event ) {
 }
 
 void MainWindow::OnMenuAbout( wxCommandEvent& event ) {
+  Log::Trace( "MainWindow::OnMenuAbout( event )" );
+
   wxMessageBox( "This is a wxWidgets Hello World example", "About Hello World", wxOK | wxICON_INFORMATION );
 }
 
 void MainWindow::OnMenuExit( wxCommandEvent& event ) {
+  Log::Trace( "MainWindow::OnMenuExit( event )" );
+
   Close( true );
 }
 
 void MainWindow::OnThreadUpdate( wxThreadEvent& event ) {
+  Log::Trace( "MainWindow::OnThreadUpdate( event )" );
+
   repoModel_->SetBasePath( currentBasePath_ );
 
   UpdateUiWithNewRepos();
 }
 
 void MainWindow::OnRepoListSelectionChanged( wxDataViewEvent& event ) {
+  Log::Trace( "MainWindow::OnRepoListSelectionChanged( event )" );
+
   wxDataViewItem tmpItem = event.GetItem();
   if( !tmpItem.IsOk() ) {
     diffModel_->SetRepository( nullptr );
     diffDisplay_->Clear();
     return;
   }
+
   wxDataViewItem& tmpItem2 = tmpItem;
   RepositoryModel::Data& item = reinterpret_cast< RepositoryModel::Data& >( tmpItem2 );
-  Log::Trace( "MainWindow::OnRepoListSelectionChanged - item: %p", item.GetID() );
+
   diffModel_->SetRepository( item.GetID() );
   diffDisplay_->Clear();
 }
 
 void MainWindow::OnRepoListItemContextMenu( wxDataViewEvent& event ) {
+  Log::Trace( "MainWindow::OnRepoListItemContextMenu( event )" );
+
   wxDataViewItem tmpItem = event.GetItem();
   if( !tmpItem.IsOk() ) {
     return;
   }
+
   wxDataViewItem& tmpItem2 = tmpItem;
   RepositoryModel::Data& item = reinterpret_cast< RepositoryModel::Data& >( tmpItem2 );
-  Log::Trace( "MainWindow::OnRepoListItemContextMenu - item: %p", item.GetID() );
+
   PopupMenu( singleRepoPopupMenu_ );
 }
 
@@ -243,14 +263,16 @@ void MainWindow::OnPopupRepoDeleteBranch( wxCommandEvent& event ) {
 }
 
 void MainWindow::OnDiffListSelectionChanged( wxDataViewEvent& event ) {
+  Log::Trace( "MainWindow::OnDiffListSelectionChanged( event )" );
+
   wxDataViewItem tmpItem = event.GetItem();
   if( !tmpItem.IsOk() ) {
     diffDisplay_->Clear();
     return;
   }
+
   wxDataViewItem& tmpItem2 = tmpItem;
   DiffModel::Data& item = reinterpret_cast< DiffModel::Data& >( tmpItem2 );
-  Log::Trace( "MainWindow::OnDiffListSelectionChanged - item: %p", item.GetID() );
 
   diffDisplay_->Clear();
   diffDisplayFile_ = item->GetPath();
@@ -262,13 +284,16 @@ void MainWindow::OnDiffListSelectionChanged( wxDataViewEvent& event ) {
 }
 
 void MainWindow::OnDiffListItemContextMenu( wxDataViewEvent& event ) {
+  Log::Trace( "MainWindow::OnDiffListItemContextMenu( event )" );
+
   wxDataViewItem tmpItem = event.GetItem();
   if( !tmpItem.IsOk() ) {
     return;
   }
+
   wxDataViewItem& tmpItem2 = tmpItem;
   DiffModel::Data& item = reinterpret_cast< DiffModel::Data& >( tmpItem2 );
-  Log::Trace( "MainWindow::OnDiffListItemContextMenu - item: %p", item.GetID() );
+
   PopupMenu( singleDiffPopupMenu_ );
 }
 
@@ -293,8 +318,9 @@ void MainWindow::OnPopupDiffUnstage( wxCommandEvent& event ) {
 }
 
 int MainWindow::GitDiffLineCallback( git_diff_delta const* delta, git_diff_hunk const* hunk, git_diff_line const* line, void* user ) {
-  MainWindow* self = reinterpret_cast< MainWindow* >( user );
   Log::Trace( "MainWindow::GitDiffLineCallback( delta: %p, hunk: %p, line: %p, user: %p )", delta, hunk, line, user );
+
+  MainWindow* self = reinterpret_cast< MainWindow* >( user );
 
   std::filesystem::path deltaNewFilePath( delta->new_file.path );
   if( self->diffDisplayFile_ != deltaNewFilePath ) {

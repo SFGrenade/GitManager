@@ -12,6 +12,8 @@
 #include <string>
 
 bool RepositoryData::IsAllowed( std::filesystem::path const& path ) {
+  Log::Trace( "RepositoryData::IsAllowed( path: '%s' )", path.string().c_str() );
+
   // check for git repository
   {
     git_repository* repo = nullptr;

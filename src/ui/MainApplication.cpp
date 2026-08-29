@@ -8,9 +8,8 @@
 #include <git2.h>
 
 bool MainApplication::OnInit() {
-  // Set up Log
   Log::Init();
-  // Log::SetLevel( Log::Level::Debug );
+  Log::Trace( "MainApplication::OnInit()" );
 
   git_libgit2_init();
 
@@ -21,10 +20,10 @@ bool MainApplication::OnInit() {
 }
 
 int MainApplication::OnExit() {
+  Log::Trace( "MainApplication::OnExit()" );
+
   git_libgit2_shutdown();
 
-  // Clean up Log
   Log::DeInit();
-
   return 0;
 }
