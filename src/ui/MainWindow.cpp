@@ -252,7 +252,6 @@ void MainWindow::OnDiffListSelectionChanged( wxDataViewEvent& event ) {
   DiffModel::Data& item = reinterpret_cast< DiffModel::Data& >( tmpItem2 );
   Log::Trace( "MainWindow::OnDiffListSelectionChanged - item: %p", item.GetID() );
 
-  // todo: fixme: fill diff display
   diffDisplay_->Clear();
   diffDisplayFile_ = item->GetPath();
 

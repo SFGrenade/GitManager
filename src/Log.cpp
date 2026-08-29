@@ -2,13 +2,31 @@
 
 // C++ headers
 #include <ctime>
+#include <filesystem>
 
 FILE* Log::file_ = nullptr;
 Log::Level Log::level_ = Log::Level::All;
 
 void Log::Init() {
-  // todo: fixme: have some logging directory depending on the system
-  file_ = fopen( "out.log", "w" );
+  std::filesystem::path logFolder = "";
+  std::string logFile = "out.log";
+#if defined( GM_LINUX )
+  if( char* xdgDataHome = std::getenv( "XDG_DATA_HOME" ); xdgDataHome != nullptr ) {
+    logFolder = std::filesystem::path( xdgDataHome ) / "GitManager";
+  } else if( char* home = std::getenv( "HOME" ); home != nullptr ) {
+    logFolder = std::filesystem::path( home ) / ".local" / "share" / "GitManager";
+  }
+#elif defined( GM_MACOS )
+  if( char* home = std::getenv( "HOME" ); home != nullptr ) {
+    logFolder = std::filesystem::path( home ) / "Library" / "Logs" / "GitManager";
+  }
+#elif defined( GM_WINDOWS )
+  if( char* home = std::getenv( "LOCALAPPDATA" ); home != nullptr ) {
+    logFolder = std::filesystem::path( home ) / "GitManager";
+  }
+#endif
+  std::filesystem::create_directories( logFolder );
+  file_ = fopen( ( logFolder / logFile ).string().c_str(), "w" );
 }
 
 void Log::SetLevel( Level level ) {

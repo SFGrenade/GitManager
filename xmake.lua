@@ -35,6 +35,14 @@ target( "GitManager" )
     set_default( true )
     set_group( "EXES" )
 
+    if is_plat( "linux" ) then
+        add_defines( "GM_LINUX" )
+    elseif is_plat( "macos" ) then
+        add_defines( "GM_MACOS" )
+    elseif is_plat( "windows" ) then
+        add_defines( "GM_WINDOWS" )
+    end
+
     add_packages( "libgit2", { public = true } )
     add_packages( "wxwidgets", { public = true } )
 
