@@ -17,7 +17,6 @@ class RepositoryData {
 
   public:
   /* git functionality */
-  void GetDiffOfFile( std::filesystem::path const& path );  // todo: fixme: how should this look?
   void TrackFile( std::filesystem::path const& path );      // todo: fixme: how should this look?
   void UntrackFile( std::filesystem::path const& path );    // todo: fixme: how should this look?
   void RevertFile( std::filesystem::path const& path );     // todo: fixme: how should this look?
