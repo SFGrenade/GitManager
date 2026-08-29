@@ -32,10 +32,10 @@ void RepositoryModel::GetValue( wxVariant& out_variant, wxDataViewItem const& wx
   RepositoryModel::Data const& item = reinterpret_cast< RepositoryModel::Data const& >( wxdviItem );
   if( col == Columns::FolderName ) {
     out_variant = wxVariant( item->GetFolderName(), "FolderName" );
-  } else if( col == Columns::Depth ) {
-    out_variant = wxVariant( std::to_string( item->GetDepth() ), "Depth" );
-  } else if( col == Columns::Path ) {
-    out_variant = wxVariant( item->GetPath(), "Path" );
+  // } else if( col == Columns::Depth ) {
+  //   out_variant = wxVariant( std::to_string( item->GetDepth() ), "Depth" );
+  // } else if( col == Columns::Path ) {
+  //   out_variant = wxVariant( item->GetPath(), "Path" );
   } else if( col == Columns::CurrentBranch ) {
     out_variant = wxVariant( item->GetCurrentBranch(), "CurrentBranch" );
   } else if( col == Columns::CurrentStatus ) {
@@ -173,5 +173,12 @@ void RepositoryModel::AddPath( std::filesystem::path const& path, uint32_t depth
     Data tmp( new RepositoryData( sortId++, path ) );
     items_.push_back( tmp );
     ItemAdded( wxDataViewItem(), reinterpret_cast< wxDataViewItem const& >( tmp ) );
+  }
+}
+
+void RepositoryModel::ModelItemsCyclicUpdate() {
+  for( auto const& item : items_ ) {
+    ValueChanged( reinterpret_cast< wxDataViewItem const& >( item ), Columns::CurrentBranch );
+    ValueChanged( reinterpret_cast< wxDataViewItem const& >( item ), Columns::CurrentStatus );
   }
 }

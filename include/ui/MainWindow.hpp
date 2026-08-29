@@ -13,7 +13,16 @@
 
 class MainWindow : public wxFrame, public wxThreadHelper {
   public:
-  enum MenuCommands { mwID_OpenFolder };
+  enum MenuCommands {
+    mwID_OpenFolder,
+    mwID_Repo_Fetch,
+    mwID_Repo_Pull,
+    mwID_Repo_Commit,
+    mwID_Repo_Push,
+    mwID_Repo_CreateBranch,
+    mwID_Repo_CheckoutBranch,
+    mwID_Repo_DeleteBranch
+  };
 
   public:
   MainWindow();
@@ -29,9 +38,17 @@ class MainWindow : public wxFrame, public wxThreadHelper {
   void OnThreadUpdate( wxThreadEvent& event );
   void OnRepoListSelectionChanged( wxDataViewEvent& event );
   void OnRepoListItemContextMenu( wxDataViewEvent& event );
+  void OnPopupRepoFetch( wxCommandEvent& event );
+  void OnPopupRepoPull( wxCommandEvent& event );
+  void OnPopupRepoCommit( wxCommandEvent& event );
+  void OnPopupRepoPush( wxCommandEvent& event );
+  void OnPopupRepoCreateBranch( wxCommandEvent& event );
+  void OnPopupRepoCheckoutBranch( wxCommandEvent& event );
+  void OnPopupRepoDeleteBranch( wxCommandEvent& event );
 
   private:
   wxDataViewCtrl* repoTreeList_ = nullptr;
   wxObjectDataPtr< RepositoryModel > repoModel_{};
+  wxMenu* singleRepoPopupMenu_ = nullptr;
   std::filesystem::path currentBasePath_{};
 };

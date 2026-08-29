@@ -14,7 +14,7 @@
 class RepositoryModel : public wxDataViewModel {
   public:
   typedef wxItemId< RepositoryData* > Data;
-  enum Columns { ALL = -1, FolderName, Depth, Path, CurrentBranch, CurrentStatus, LAST };
+  enum Columns { ALL = -1, FolderName, /*Depth, Path,*/ CurrentBranch, CurrentStatus, LAST };
 
   public:
   RepositoryModel();
@@ -41,6 +41,7 @@ class RepositoryModel : public wxDataViewModel {
   private:
   void ScanPath( std::filesystem::path const& path, uint32_t depth, int64_t& sortId );
   void AddPath( std::filesystem::path const& path, uint32_t depth, int64_t& sortId );
+  void ModelItemsCyclicUpdate();
 
   private:
   std::filesystem::path basePath_{};

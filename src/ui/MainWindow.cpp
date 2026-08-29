@@ -17,15 +17,15 @@
 #include <array>
 
 MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
-  wxMenu* menuFile = new wxMenu;
+  wxMenu* menuFile = new wxMenu();
   menuFile->Append( mwID_OpenFolder, _( "&Open Folder...\tCtrl+O" ) );
   menuFile->AppendSeparator();
   menuFile->Append( wxID_EXIT );
 
-  wxMenu* menuHelp = new wxMenu;
+  wxMenu* menuHelp = new wxMenu();
   menuHelp->Append( wxID_ABOUT );
 
-  wxMenuBar* menuBar = new wxMenuBar;
+  wxMenuBar* menuBar = new wxMenuBar();
   menuBar->Append( menuFile, _( "&File" ) );
   menuBar->Append( menuHelp, _( "&Help" ) );
 
@@ -79,10 +79,20 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
 
   repoTreeList_->AssociateModel( repoModel_.get() );
   repoTreeList_->AppendTextColumn( "FolderName", RepositoryModel::Columns::FolderName );
-  repoTreeList_->AppendTextColumn( "Depth", RepositoryModel::Columns::Depth );
-  repoTreeList_->AppendTextColumn( "Path", RepositoryModel::Columns::Path );
+  // repoTreeList_->AppendTextColumn( "Depth", RepositoryModel::Columns::Depth );
+  // repoTreeList_->AppendTextColumn( "Path", RepositoryModel::Columns::Path );
   repoTreeList_->AppendTextColumn( "CurrentBranch", RepositoryModel::Columns::CurrentBranch );
   repoTreeList_->AppendTextColumn( "CurrentStatus", RepositoryModel::Columns::CurrentStatus );
+
+  singleRepoPopupMenu_ = new wxMenu();
+  singleRepoPopupMenu_->Append( mwID_Repo_Fetch, _( "Fetch" ) );
+  singleRepoPopupMenu_->Append( mwID_Repo_Pull, _( "Pull" ) );
+  singleRepoPopupMenu_->Append( mwID_Repo_Commit, _( "Commit..." ) );
+  singleRepoPopupMenu_->Append( mwID_Repo_Push, _( "Push" ) );
+  singleRepoPopupMenu_->AppendSeparator();
+  singleRepoPopupMenu_->Append( mwID_Repo_CreateBranch, _( "Create Branch..." ) );
+  singleRepoPopupMenu_->Append( mwID_Repo_CheckoutBranch, _( "Checkout Branch..." ) );
+  singleRepoPopupMenu_->Append( mwID_Repo_DeleteBranch, _( "Delete Branch..." ) );
 
   Bind( wxEVT_MENU, &MainWindow::OnMenuOpenFolder, this, mwID_OpenFolder );
   Bind( wxEVT_MENU, &MainWindow::OnMenuAbout, this, wxID_ABOUT );
@@ -90,6 +100,13 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   Bind( wxEVT_THREAD, &MainWindow::OnThreadUpdate, this );
   Bind( wxEVT_DATAVIEW_SELECTION_CHANGED, &MainWindow::OnRepoListSelectionChanged, this, repoTreeList_->GetId() );
   Bind( wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, &MainWindow::OnRepoListItemContextMenu, this, repoTreeList_->GetId() );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupRepoFetch, this, mwID_Repo_Fetch );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupRepoPull, this, mwID_Repo_Pull );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupRepoCommit, this, mwID_Repo_Commit );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupRepoPush, this, mwID_Repo_Push );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupRepoCreateBranch, this, mwID_Repo_CreateBranch );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupRepoCheckoutBranch, this, mwID_Repo_CheckoutBranch );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupRepoDeleteBranch, this, mwID_Repo_DeleteBranch );
 
   UpdateUiWithNewRepos();
 }
@@ -168,4 +185,33 @@ void MainWindow::OnRepoListItemContextMenu( wxDataViewEvent& event ) {
     return;
   }
   Log::Debug( "MainWindow::OnRepoListItemContextMenu - item: %p", item.GetID() );
+  PopupMenu( singleRepoPopupMenu_ );
+}
+
+void MainWindow::OnPopupRepoFetch( wxCommandEvent& event ) {
+  Log::Debug( "MainWindow::OnPopupRepoFetch( event )" );
+}
+
+void MainWindow::OnPopupRepoPull( wxCommandEvent& event ) {
+  Log::Debug( "MainWindow::OnPopupRepoPull( event )" );
+}
+
+void MainWindow::OnPopupRepoCommit( wxCommandEvent& event ) {
+  Log::Debug( "MainWindow::OnPopupRepoCommit( event )" );
+}
+
+void MainWindow::OnPopupRepoPush( wxCommandEvent& event ) {
+  Log::Debug( "MainWindow::OnPopupRepoPush( event )" );
+}
+
+void MainWindow::OnPopupRepoCreateBranch( wxCommandEvent& event ) {
+  Log::Debug( "MainWindow::OnPopupRepoCreateBranch( event )" );
+}
+
+void MainWindow::OnPopupRepoCheckoutBranch( wxCommandEvent& event ) {
+  Log::Debug( "MainWindow::OnPopupRepoCheckoutBranch( event )" );
+}
+
+void MainWindow::OnPopupRepoDeleteBranch( wxCommandEvent& event ) {
+  Log::Debug( "MainWindow::OnPopupRepoDeleteBranch( event )" );
 }
