@@ -39,13 +39,14 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   wxSplitterWindow* splitterWindow2 = new wxSplitterWindow( rightPanel );
   wxPanel* rightLeftPanel = new wxPanel( splitterWindow2 );
   wxPanel* rightRightPanel = new wxPanel( splitterWindow2 );
-  wxStaticText* diffDisplayLabel = new wxStaticText( rightRightPanel, wxID_ANY, "Diff Display" );
 
   repoTreeList_ = new wxDataViewCtrl( leftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE | wxDV_ROW_LINES /*| wxDV_NO_HEADER*/ );
   repoModel_ = decltype( repoModel_ )( new RepositoryModel() );
 
   diffList_ = new wxDataViewCtrl( rightLeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE | wxDV_ROW_LINES /*| wxDV_NO_HEADER*/ );
   diffModel_ = decltype( diffModel_ )( new DiffModel() );
+
+  diffDisplay_ = new wxTextCtrl( rightRightPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2 | wxTE_NOHIDESEL | wxHSCROLL | wxTE_LEFT | wxTE_DONTWRAP );
 
   wxGridSizer* panelSizer = new wxGridSizer( 1, 1, 0, 0 );
   wxGridSizer* leftPanelSizer = new wxGridSizer( 1, 1, 0, 0 );
@@ -65,7 +66,7 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   rightLeftPanelSizer->Add( diffList_, 1, wxEXPAND | wxALL );
   rightLeftPanel->SetSizer( rightLeftPanelSizer );
 
-  rightRightPanelSizer->Add( diffDisplayLabel, 1, wxEXPAND | wxALL );
+  rightRightPanelSizer->Add( diffDisplay_, 1, wxEXPAND | wxALL );
   rightRightPanel->SetSizer( rightRightPanelSizer );
 
   splitterWindow1->SetSplitMode( wxSPLIT_VERTICAL );
@@ -99,6 +100,13 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   singleRepoPopupMenu_->Append( mwID_Repo_CheckoutBranch, _( "Checkout Branch..." ) );
   singleRepoPopupMenu_->Append( mwID_Repo_DeleteBranch, _( "Delete Branch..." ) );
 
+  singleDiffPopupMenu_ = new wxMenu();
+  singleDiffPopupMenu_->Append( mwID_Diff_Track, _( "Track" ) );
+  singleDiffPopupMenu_->Append( mwID_Diff_Untrack, _( "Untrack" ) );
+  singleDiffPopupMenu_->Append( mwID_Diff_Revert, _( "Revert" ) );
+  singleDiffPopupMenu_->Append( mwID_Diff_Stage, _( "Stage" ) );
+  singleDiffPopupMenu_->Append( mwID_Diff_Unstage, _( "Unstage" ) );
+
   Bind( wxEVT_MENU, &MainWindow::OnMenuOpenFolder, this, mwID_OpenFolder );
   Bind( wxEVT_MENU, &MainWindow::OnMenuAbout, this, wxID_ABOUT );
   Bind( wxEVT_MENU, &MainWindow::OnMenuExit, this, wxID_EXIT );
@@ -112,6 +120,13 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   Bind( wxEVT_MENU, &MainWindow::OnPopupRepoCreateBranch, this, mwID_Repo_CreateBranch );
   Bind( wxEVT_MENU, &MainWindow::OnPopupRepoCheckoutBranch, this, mwID_Repo_CheckoutBranch );
   Bind( wxEVT_MENU, &MainWindow::OnPopupRepoDeleteBranch, this, mwID_Repo_DeleteBranch );
+  Bind( wxEVT_DATAVIEW_SELECTION_CHANGED, &MainWindow::OnDiffListSelectionChanged, this, diffList_->GetId() );
+  Bind( wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, &MainWindow::OnDiffListItemContextMenu, this, diffList_->GetId() );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupDiffTrack, this, mwID_Diff_Track );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupDiffUntrack, this, mwID_Diff_Untrack );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupDiffRevert, this, mwID_Diff_Revert );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupDiffStage, this, mwID_Diff_Stage );
+  Bind( wxEVT_MENU, &MainWindow::OnPopupDiffUnstage, this, mwID_Diff_Unstage );
 
   UpdateUiWithNewRepos();
 }
@@ -175,16 +190,17 @@ void MainWindow::OnThreadUpdate( wxThreadEvent& event ) {
 }
 
 void MainWindow::OnRepoListSelectionChanged( wxDataViewEvent& event ) {
-  // wxEVT_DATAVIEW_SELECTION_CHANGED -> event.GetItem()
   wxDataViewItem tmpItem = event.GetItem();
   if( !tmpItem.IsOk() ) {
     diffModel_->SetRepository( nullptr );
+    diffDisplay_->Clear();
     return;
   }
   wxDataViewItem& tmpItem2 = tmpItem;
   RepositoryModel::Data& item = reinterpret_cast< RepositoryModel::Data& >( tmpItem2 );
-  Log::Debug( "MainWindow::OnRepoListSelectionChanged - item: %p", item.GetID() );
+  Log::Trace( "MainWindow::OnRepoListSelectionChanged - item: %p", item.GetID() );
   diffModel_->SetRepository( item.GetID() );
+  diffDisplay_->Clear();
 }
 
 void MainWindow::OnRepoListItemContextMenu( wxDataViewEvent& event ) {
@@ -194,34 +210,118 @@ void MainWindow::OnRepoListItemContextMenu( wxDataViewEvent& event ) {
   }
   wxDataViewItem& tmpItem2 = tmpItem;
   RepositoryModel::Data& item = reinterpret_cast< RepositoryModel::Data& >( tmpItem2 );
-  Log::Debug( "MainWindow::OnRepoListItemContextMenu - item: %p", item.GetID() );
+  Log::Trace( "MainWindow::OnRepoListItemContextMenu - item: %p", item.GetID() );
   PopupMenu( singleRepoPopupMenu_ );
 }
 
 void MainWindow::OnPopupRepoFetch( wxCommandEvent& event ) {
-  Log::Debug( "MainWindow::OnPopupRepoFetch( event )" );
+  Log::Trace( "MainWindow::OnPopupRepoFetch( event )" );
 }
 
 void MainWindow::OnPopupRepoPull( wxCommandEvent& event ) {
-  Log::Debug( "MainWindow::OnPopupRepoPull( event )" );
+  Log::Trace( "MainWindow::OnPopupRepoPull( event )" );
 }
 
 void MainWindow::OnPopupRepoCommit( wxCommandEvent& event ) {
-  Log::Debug( "MainWindow::OnPopupRepoCommit( event )" );
+  Log::Trace( "MainWindow::OnPopupRepoCommit( event )" );
 }
 
 void MainWindow::OnPopupRepoPush( wxCommandEvent& event ) {
-  Log::Debug( "MainWindow::OnPopupRepoPush( event )" );
+  Log::Trace( "MainWindow::OnPopupRepoPush( event )" );
 }
 
 void MainWindow::OnPopupRepoCreateBranch( wxCommandEvent& event ) {
-  Log::Debug( "MainWindow::OnPopupRepoCreateBranch( event )" );
+  Log::Trace( "MainWindow::OnPopupRepoCreateBranch( event )" );
 }
 
 void MainWindow::OnPopupRepoCheckoutBranch( wxCommandEvent& event ) {
-  Log::Debug( "MainWindow::OnPopupRepoCheckoutBranch( event )" );
+  Log::Trace( "MainWindow::OnPopupRepoCheckoutBranch( event )" );
 }
 
 void MainWindow::OnPopupRepoDeleteBranch( wxCommandEvent& event ) {
-  Log::Debug( "MainWindow::OnPopupRepoDeleteBranch( event )" );
+  Log::Trace( "MainWindow::OnPopupRepoDeleteBranch( event )" );
+}
+
+void MainWindow::OnDiffListSelectionChanged( wxDataViewEvent& event ) {
+  wxDataViewItem tmpItem = event.GetItem();
+  if( !tmpItem.IsOk() ) {
+    diffDisplay_->Clear();
+    return;
+  }
+  wxDataViewItem& tmpItem2 = tmpItem;
+  DiffModel::Data& item = reinterpret_cast< DiffModel::Data& >( tmpItem2 );
+  Log::Trace( "MainWindow::OnDiffListSelectionChanged - item: %p", item.GetID() );
+
+  // todo: fixme: fill diff display
+  diffDisplay_->Clear();
+  diffDisplayFile_ = item->GetPath();
+
+  if( int error = git_diff_foreach( diffModel_->GetDiff().get(), nullptr, nullptr, nullptr, GitDiffLineCallback, this ); error < 0 ) {
+    PrintGitError( "git_diff_foreach", error );
+    return;
+  }
+}
+
+void MainWindow::OnDiffListItemContextMenu( wxDataViewEvent& event ) {
+  wxDataViewItem tmpItem = event.GetItem();
+  if( !tmpItem.IsOk() ) {
+    return;
+  }
+  wxDataViewItem& tmpItem2 = tmpItem;
+  DiffModel::Data& item = reinterpret_cast< DiffModel::Data& >( tmpItem2 );
+  Log::Trace( "MainWindow::OnDiffListItemContextMenu - item: %p", item.GetID() );
+  PopupMenu( singleDiffPopupMenu_ );
+}
+
+void MainWindow::OnPopupDiffTrack( wxCommandEvent& event ) {
+  Log::Trace( "MainWindow::OnPopupDiffTrack( event )" );
+}
+
+void MainWindow::OnPopupDiffUntrack( wxCommandEvent& event ) {
+  Log::Trace( "MainWindow::OnPopupDiffUntrack( event )" );
+}
+
+void MainWindow::OnPopupDiffRevert( wxCommandEvent& event ) {
+  Log::Trace( "MainWindow::OnPopupDiffRevert( event )" );
+}
+
+void MainWindow::OnPopupDiffStage( wxCommandEvent& event ) {
+  Log::Trace( "MainWindow::OnPopupDiffStage( event )" );
+}
+
+void MainWindow::OnPopupDiffUnstage( wxCommandEvent& event ) {
+  Log::Trace( "MainWindow::OnPopupDiffUnstage( event )" );
+}
+
+int MainWindow::GitDiffLineCallback( git_diff_delta const* delta, git_diff_hunk const* hunk, git_diff_line const* line, void* user ) {
+  MainWindow* self = reinterpret_cast< MainWindow* >( user );
+  Log::Trace( "MainWindow::GitDiffLineCallback( delta: %p, hunk: %p, line: %p, user: %p )", delta, hunk, line, user );
+
+  std::filesystem::path deltaNewFilePath( delta->new_file.path );
+  if( self->diffDisplayFile_ != deltaNewFilePath ) {
+    return 0;
+  }
+
+  auto defaultStyle = self->diffDisplay_->GetDefaultStyle();
+  wxColour defaultTextColour = defaultStyle.GetTextColour();
+  wxColour defaultBackgroundColour = defaultStyle.GetBackgroundColour();
+
+  if( line->origin == GIT_DIFF_LINE_CONTEXT ) {
+    // nothing special for context
+  } else if( line->origin == GIT_DIFF_LINE_ADDITION ) {
+    self->diffDisplay_->SetDefaultStyle( wxTextAttr( wxNullColour, *wxGREEN ) );
+  } else if( line->origin == GIT_DIFF_LINE_DELETION ) {
+    self->diffDisplay_->SetDefaultStyle( wxTextAttr( wxNullColour, *wxRED ) );
+  }
+
+  self->diffDisplay_->AppendText( wxString( line->content, line->content_len ) );
+
+  self->diffDisplay_->SetDefaultStyle( wxTextAttr( defaultTextColour, defaultBackgroundColour ) );
+
+  return 0;
+}
+
+void MainWindow::PrintGitError( std::string const& type, int errorCode ) const {
+  git_error const* e = git_error_last();
+  Log::Error( "%s error: %d/%d: %s", type.c_str(), errorCode, e->klass, e->message );
 }
