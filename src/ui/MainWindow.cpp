@@ -5,7 +5,6 @@
 
 // Library headers
 #include <wx/dirdlg.h>
-#include <wx/log.h>
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/panel.h>
@@ -40,11 +39,13 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   wxSplitterWindow* splitterWindow2 = new wxSplitterWindow( rightPanel );
   wxPanel* rightLeftPanel = new wxPanel( splitterWindow2 );
   wxPanel* rightRightPanel = new wxPanel( splitterWindow2 );
-  wxStaticText* changedFileDisplayLabel = new wxStaticText( rightLeftPanel, wxID_ANY, "Changed Files Display" );
   wxStaticText* diffDisplayLabel = new wxStaticText( rightRightPanel, wxID_ANY, "Diff Display" );
 
   repoTreeList_ = new wxDataViewCtrl( leftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE | wxDV_ROW_LINES /*| wxDV_NO_HEADER*/ );
   repoModel_ = decltype( repoModel_ )( new RepositoryModel() );
+
+  diffList_ = new wxDataViewCtrl( rightLeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE | wxDV_ROW_LINES /*| wxDV_NO_HEADER*/ );
+  diffModel_ = decltype( diffModel_ )( new DiffModel() );
 
   wxGridSizer* panelSizer = new wxGridSizer( 1, 1, 0, 0 );
   wxGridSizer* leftPanelSizer = new wxGridSizer( 1, 1, 0, 0 );
@@ -61,7 +62,7 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   rightPanelSizer->Add( splitterWindow2, 1, wxEXPAND | wxALL );
   rightPanel->SetSizer( rightPanelSizer );
 
-  rightLeftPanelSizer->Add( changedFileDisplayLabel, 1, wxEXPAND | wxALL );
+  rightLeftPanelSizer->Add( diffList_, 1, wxEXPAND | wxALL );
   rightLeftPanel->SetSizer( rightLeftPanelSizer );
 
   rightRightPanelSizer->Add( diffDisplayLabel, 1, wxEXPAND | wxALL );
@@ -83,6 +84,10 @@ MainWindow::MainWindow() : wxFrame( nullptr, wxID_ANY, _( "Git Manager" ) ) {
   // repoTreeList_->AppendTextColumn( "Path", RepositoryModel::Columns::Path );
   repoTreeList_->AppendTextColumn( "CurrentBranch", RepositoryModel::Columns::CurrentBranch );
   repoTreeList_->AppendTextColumn( "CurrentStatus", RepositoryModel::Columns::CurrentStatus );
+
+  diffList_->AssociateModel( diffModel_.get() );
+  diffList_->AppendTextColumn( "Path", DiffModel::Columns::Path );
+  diffList_->AppendTextColumn( "Status", DiffModel::Columns::Status );
 
   singleRepoPopupMenu_ = new wxMenu();
   singleRepoPopupMenu_->Append( mwID_Repo_Fetch, _( "Fetch" ) );
@@ -171,19 +176,24 @@ void MainWindow::OnThreadUpdate( wxThreadEvent& event ) {
 
 void MainWindow::OnRepoListSelectionChanged( wxDataViewEvent& event ) {
   // wxEVT_DATAVIEW_SELECTION_CHANGED -> event.GetItem()
-  wxDataViewItem item = event.GetItem();
-  if( !item.IsOk() ) {
+  wxDataViewItem tmpItem = event.GetItem();
+  if( !tmpItem.IsOk() ) {
+    diffModel_->SetRepository( nullptr );
     return;
   }
+  wxDataViewItem& tmpItem2 = tmpItem;
+  RepositoryModel::Data& item = reinterpret_cast< RepositoryModel::Data& >( tmpItem2 );
   Log::Debug( "MainWindow::OnRepoListSelectionChanged - item: %p", item.GetID() );
+  diffModel_->SetRepository( item.GetID() );
 }
 
 void MainWindow::OnRepoListItemContextMenu( wxDataViewEvent& event ) {
-  // wxEVT_DATAVIEW_ITEM_CONTEXT_MENU -> event.GetItem()
-  wxDataViewItem item = event.GetItem();
-  if( !item.IsOk() ) {
+  wxDataViewItem tmpItem = event.GetItem();
+  if( !tmpItem.IsOk() ) {
     return;
   }
+  wxDataViewItem& tmpItem2 = tmpItem;
+  RepositoryModel::Data& item = reinterpret_cast< RepositoryModel::Data& >( tmpItem2 );
   Log::Debug( "MainWindow::OnRepoListItemContextMenu - item: %p", item.GetID() );
   PopupMenu( singleRepoPopupMenu_ );
 }

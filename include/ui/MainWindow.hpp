@@ -1,6 +1,7 @@
 #pragma once
 
 // Project headers
+#include <models/DiffModel.hpp>
 #include <models/RepositoryModel.hpp>
 
 // Library headers
@@ -50,5 +51,9 @@ class MainWindow : public wxFrame, public wxThreadHelper {
   wxDataViewCtrl* repoTreeList_ = nullptr;
   wxObjectDataPtr< RepositoryModel > repoModel_{};
   wxMenu* singleRepoPopupMenu_ = nullptr;
+
+  wxDataViewCtrl* diffList_ = nullptr;
+  wxObjectDataPtr< DiffModel > diffModel_{};
+
   std::filesystem::path currentBasePath_{};
 };
