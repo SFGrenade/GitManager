@@ -6,6 +6,9 @@
 
 class Log {
   public:
+  enum class Level { All = -1, Trace, Debug, Warning, Error, None };
+
+  public:
   Log() = delete;
   Log( Log const& ) = delete;
   Log( Log&& ) = delete;
@@ -13,6 +16,7 @@ class Log {
   Log& operator=( Log&& ) = delete;
 
   static void Init();
+  static void SetLevel( Level level );
   static void DeInit();
 
   static void LogLine( std::string const& level, std::string const& outputString );
@@ -38,6 +42,7 @@ class Log {
 
   private:
   static FILE* file_;
+  static Level level_;
 };
 
 template < class... T >
@@ -49,20 +54,24 @@ void Log::LogLine( std::string const& level, std::string const& formatString, T.
 
 template < class... T >
 void Log::Trace( std::string const& formatString, T... args ) {
-  return LogLine< T... >( "trace", formatString, args... );
+  if( level_ <= Log::Level::Trace )
+    return LogLine< T... >( "trace", formatString, args... );
 }
 
 template < class... T >
 void Log::Debug( std::string const& formatString, T... args ) {
-  return LogLine< T... >( "debug", formatString, args... );
+  if( level_ <= Log::Level::Debug )
+    return LogLine< T... >( "debug", formatString, args... );
 }
 
 template < class... T >
 void Log::Warning( std::string const& formatString, T... args ) {
-  return LogLine< T... >( "warning", formatString, args... );
+  if( level_ <= Log::Level::Warning )
+    return LogLine< T... >( "warning", formatString, args... );
 }
 
 template < class... T >
 void Log::Error( std::string const& formatString, T... args ) {
-  return LogLine< T... >( "error", formatString, args... );
+  if( level_ <= Log::Level::Error )
+    return LogLine< T... >( "error", formatString, args... );
 }

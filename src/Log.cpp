@@ -4,9 +4,15 @@
 #include <ctime>
 
 FILE* Log::file_ = nullptr;
+Log::Level Log::level_ = Log::Level::All;
 
 void Log::Init() {
+  // todo: fixme: have some logging directory depending on the system
   file_ = fopen( "out.log", "w" );
+}
+
+void Log::SetLevel( Level level ) {
+  level_ = level;
 }
 
 void Log::DeInit() {
@@ -21,19 +27,23 @@ void Log::LogLine( std::string const& level, std::string const& outputString ) {
 }
 
 void Log::Trace( std::string const& outputString ) {
-  return LogLine( "trace", outputString );
+  if( level_ <= Log::Level::Trace )
+    return LogLine( "trace", outputString );
 }
 
 void Log::Debug( std::string const& outputString ) {
-  return LogLine( "debug", outputString );
+  if( level_ <= Log::Level::Debug )
+    return LogLine( "debug", outputString );
 }
 
 void Log::Warning( std::string const& outputString ) {
-  return LogLine( "warning", outputString );
+  if( level_ <= Log::Level::Warning )
+    return LogLine( "warning", outputString );
 }
 
 void Log::Error( std::string const& outputString ) {
-  return LogLine( "error", outputString );
+  if( level_ <= Log::Level::Error )
+    return LogLine( "error", outputString );
 }
 
 void Log::StartLogLine( std::string const& level ) {
