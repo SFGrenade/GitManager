@@ -1,12 +1,10 @@
 #include "utils.hpp"
 
-// C++ headers
-#include <algorithm>
+namespace std {
 
-void toUpper( std::string& str ) {
-  std::transform( str.begin(), str.end(), str.begin(), []( std::string::value_type c ) { return std::toupper( c ); } );
+std::string to_string( std::filesystem::path const& path ) {
+  std::u8string tmp = path.u8string();
+  return std::string( reinterpret_cast< char const* >( tmp.data() ), tmp.size() );
 }
 
-void toLower( std::string& str ) {
-  std::transform( str.begin(), str.end(), str.begin(), []( std::string::value_type c ) { return std::tolower( c ); } );
-}
+}  // namespace std

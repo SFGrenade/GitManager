@@ -1,5 +1,8 @@
 #include "Log.hpp"
 
+// Project headers
+#include <utils.hpp>
+
 // C++ headers
 #include <ctime>
 #include <filesystem>
@@ -26,7 +29,7 @@ void Log::Init() {
   }
 #endif
   std::filesystem::create_directories( logFolder );
-  file_ = fopen( ( logFolder / logFile ).string().c_str(), "w" );
+  file_ = fopen( std::to_string( logFolder / logFile ).c_str(), "w" );
 }
 
 void Log::SetLevel( Level level ) {

@@ -2,6 +2,7 @@
 
 // Project headers
 #include <Log.hpp>
+#include <utils.hpp>
 
 // Library headers
 #include <wx/dirdlg.h>
@@ -146,15 +147,16 @@ void MainWindow::UpdateUiWithNewRepos() {
 
   std::array< char, 256 > tmp;
 
-  tmp.fill( '\0' );
+  tmp.fill( 0 );
   if( currentBasePath_ != std::filesystem::path{} ) {
-    snprintf( tmp.data(), tmp.size(), "%s: %s", _( "Git Manager" ).c_str().AsChar(), currentBasePath_.filename().string().c_str() );
+    std::string currentBasePathStr = std::to_string( currentBasePath_.filename() );
+    snprintf( tmp.data(), tmp.size(), "%s: %s", _( "Git Manager" ).c_str().AsChar(), currentBasePathStr.c_str() );
   } else {
     snprintf( tmp.data(), tmp.size(), "%s", _( "Git Manager" ).c_str().AsChar() );
   }
   SetTitle( tmp.data() );
 
-  tmp.fill( '\0' );
+  tmp.fill( 0 );
   {
     wxDataViewItem tmpParent;
     wxDataViewItemArray tmpChildren;

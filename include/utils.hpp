@@ -1,16 +1,31 @@
 #pragma once
 
 // C++ headers
+#include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <string>
+
+namespace std {
+
+std::string to_string( std::filesystem::path const& path );
+
+}
 
 template < class T, size_t N >
 constexpr size_t arraySize( T ( & )[N] ) {
   return N;
 }
 
-void toUpper( std::string& str );
-void toLower( std::string& str );
+template < class T >
+void toUpper( T& str ) {
+  std::transform( str.begin(), str.end(), str.begin(), []( T::value_type c ) { return std::toupper( c ); } );
+}
+
+template < class T >
+void toLower( T& str ) {
+  std::transform( str.begin(), str.end(), str.begin(), []( T::value_type c ) { return std::tolower( c ); } );
+}
 
 #define RAW_PTR_TO_SHARED_PTR( type, name, deleteMethod, createMethod, ... ) \
   std::shared_ptr< type > name;                                              \

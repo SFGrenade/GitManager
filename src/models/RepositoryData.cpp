@@ -12,12 +12,13 @@
 #include <string>
 
 bool RepositoryData::IsAllowed( std::filesystem::path const& path ) {
-  Log::Trace( "RepositoryData::IsAllowed( path: '%s' )", path.string().c_str() );
+  std::string pathStr = std::to_string( path );
+  Log::Trace( "RepositoryData::IsAllowed( path: '%s' )", pathStr.c_str() );
 
   // check for git repository
   {
     git_repository* repo = nullptr;
-    if( int error = git_repository_open( &repo, path.string().c_str() ); error == 0 ) {
+    if( int error = git_repository_open( &repo, pathStr.c_str() ); error == 0 ) {
       git_repository_free( repo );
       return true;
     }
@@ -26,10 +27,11 @@ bool RepositoryData::IsAllowed( std::filesystem::path const& path ) {
 }
 
 RepositoryData::RepositoryData( int64_t sortId, std::filesystem::path const& path ) : sortId_( sortId ), folderPath_( std::filesystem::absolute( path ) ) {
-  Log::Trace( "RepositoryData::RepositoryData( sortId: %d, path: '%s' )", sortId, path.string().c_str() );
+  std::string pathStr = std::to_string( path );
+  Log::Trace( "RepositoryData::RepositoryData( sortId: %d, path: '%s' )", sortId, pathStr.c_str() );
 
   git_repository* repo = nullptr;
-  if( int error = git_repository_open( &repo, folderPath_.string().c_str() ); error < 0 ) {
+  if( int error = git_repository_open( &repo, std::to_string( folderPath_ ).c_str() ); error < 0 ) {
     PrintGitError( "git_repository_open", error );
     return;
   }
@@ -40,39 +42,44 @@ RepositoryData::RepositoryData( int64_t sortId, std::filesystem::path const& pat
 }
 
 void RepositoryData::TrackFile( std::filesystem::path const& path ) {
-  Log::Trace( "RepositoryData::TrackFile( path: '%s' )", path.string().c_str() );
+  std::string pathStr = std::to_string( path );
+  Log::Trace( "RepositoryData::TrackFile( path: '%s' )", pathStr.c_str() );
 
   RAW_PTR_TO_SHARED_PTR( git_index, index, git_index_free, git_repository_index, &r_index, gitRepo_.get() );
 
-  if( int error = git_index_add_bypath( index.get(), path.string().c_str() ); error < 0 ) {
+  if( int error = git_index_add_bypath( index.get(), std::to_string( path ).c_str() ); error < 0 ) {
     PrintGitError( "git_index_add_bypath", error );
     return;
   }
 }
 
 void RepositoryData::UntrackFile( std::filesystem::path const& path ) {
-  Log::Trace( "RepositoryData::UntrackFile( path: '%s' )", path.string().c_str() );
+  std::string pathStr = std::to_string( path );
+  Log::Trace( "RepositoryData::UntrackFile( path: '%s' )", pathStr.c_str() );
 
   RAW_PTR_TO_SHARED_PTR( git_index, index, git_index_free, git_repository_index, &r_index, gitRepo_.get() );
 
-  if( int error = git_index_remove_bypath( index.get(), path.string().c_str() ); error < 0 ) {
+  if( int error = git_index_remove_bypath( index.get(), std::to_string( path ).c_str() ); error < 0 ) {
     PrintGitError( "git_index_remove_bypath", error );
     return;
   }
 }
 
 void RepositoryData::RevertFile( std::filesystem::path const& path ) {
-  Log::Trace( "RepositoryData::RevertFile( path: '%s' )", path.string().c_str() );
+  std::string pathStr = std::to_string( path );
+  Log::Trace( "RepositoryData::RevertFile( path: '%s' )", pathStr.c_str() );
   // todo: fixme: function signature and implementation
 }
 
 void RepositoryData::StageFile( std::filesystem::path const& path ) {
-  Log::Trace( "RepositoryData::StageFile( path: '%s' )", path.string().c_str() );
+  std::string pathStr = std::to_string( path );
+  Log::Trace( "RepositoryData::StageFile( path: '%s' )", pathStr.c_str() );
   // todo: fixme: function signature and implementation
 }
 
 void RepositoryData::UnstageFile( std::filesystem::path const& path ) {
-  Log::Trace( "RepositoryData::UnstageFile( path: '%s' )", path.string().c_str() );
+  std::string pathStr = std::to_string( path );
+  Log::Trace( "RepositoryData::UnstageFile( path: '%s' )", pathStr.c_str() );
   // todo: fixme: function signature and implementation
 }
 
@@ -114,7 +121,7 @@ void RepositoryData::DeleteBranch( std::string const& branchName ) {
 std::string RepositoryData::GetFolderName() const {
   Log::Trace( "RepositoryData::GetFolderName()" );
 
-  return folderPath_.filename().string();
+  return std::to_string( folderPath_.filename() );
 }
 
 size_t RepositoryData::GetDepth() const {
@@ -126,7 +133,7 @@ size_t RepositoryData::GetDepth() const {
 std::string RepositoryData::GetPath() const {
   Log::Trace( "RepositoryData::GetPath()" );
 
-  return folderPath_.string();
+  return std::to_string( folderPath_ );
 }
 
 std::string RepositoryData::GetCurrentBranch() const {
@@ -216,7 +223,7 @@ std::string RepositoryData::GetCurrentStatus() const {
   }
 
   std::array< char, 512 > tmpBuffer;
-  tmpBuffer.fill( '\0' );
+  tmpBuffer.fill( 0 );
 
   size_t formattedStringSize = snprintf( tmpBuffer.data(),
                                          tmpBuffer.size() - 1,
