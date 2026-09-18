@@ -26,6 +26,7 @@ jobs:
 
     - name: Setup Clang+LLVM
       run: |
+        sudo apt-get update
         sudo apt-get install clang lld llvm
         clang++ -v
         ld.lld -v
