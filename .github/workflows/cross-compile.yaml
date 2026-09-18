@@ -27,19 +27,6 @@ jobs:
     - name: Setup Clang+LLVM
       run: |
         sudo apt-get update && sudo apt-get install --no-install-recommends clang-20 lld-20 llvm-20
-
-        #sudo ln -s clang-20 /usr/bin/clang
-        #sudo ln -s clang /usr/bin/clang++
-        #sudo ln -s lld-20 /usr/bin/ld.lld
-        #sudo ln -s clang-20 /usr/bin/clang-cl
-        #sudo ln -s llvm-ar-20 /usr/bin/llvm-lib
-        #sudo ln -s lld-link-20 /usr/bin/lld-link
-
-        clang++ -v
-        ld.lld -v
-        llvm-lib -v
-        clang-cl -v
-        lld-link --version
       shell: bash
 
     - name: Set OUTPUT_FILE variable
