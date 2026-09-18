@@ -26,7 +26,7 @@ jobs:
 
     - name: Setup Clang+LLVM
       run: |
-        sudo apk add clang18 lld18 llvm18
+        sudo apt-get install clang lld llvm
         clang++ -v
         ld.lld -v
         llvm-lib -v
