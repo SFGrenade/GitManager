@@ -26,7 +26,7 @@ jobs:
 
     - name: Setup Clang+LLVM
       run: |
-        sudo apt-get update && sudo apt-get install --no-install-recommends clang-20 lld-20 llvm-20
+        sudo apt-get update && sudo apt-get install --no-install-recommends clang-20 clang-tools-20 lld-20 llvm-20 llvm-20-tools
       shell: bash
 
     - name: Set OUTPUT_FILE variable
@@ -56,7 +56,7 @@ jobs:
       run: xmake repo --update -vD
 
     - name: Configure xmake and install dependencies
-      run: xmake config -vD --toolchain=llvm --plat=${{ matrix.target_os }} --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
+      run: xmake config -vD --toolchain=llvm-20 --plat=${{ matrix.target_os }} --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
 
     - name: Build all targets
       run: xmake build -vD -a
