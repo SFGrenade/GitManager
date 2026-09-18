@@ -15,6 +15,8 @@ jobs:
         arch: [x86_64]
         kind: [shared]
         mode: [release]
+        include_dirs: ['/xwin/crt/include:/xwin/sdk/include/ucrt:/xwin/sdk/include/um:/xwin/sdk/include/shared']
+        link_dirs: ['/xwin/crt/lib/x86_64:/xwin/sdk/lib/um/x86_64:/xwin/sdk/lib/ucrt/x86_64']
 
     runs-on: ubuntu-latest
 
@@ -26,7 +28,17 @@ jobs:
 
     - name: Setup Clang+LLVM
       run: |
-        sudo apt-get update && sudo apt-get install --no-install-recommends clang-20 clang-tools-20 lld-20 llvm-20 llvm-20-tools
+        sudo apt-get update && sudo apt-get install --no-install-recommends clang clang-tools lld llvm llvm-tools
+      shell: bash
+
+    - name: Setup xwin
+      run: |
+        xwin_version="0.10.0"
+        xwin_prefix="xwin-$xwin_version-x86_64-unknown-linux-musl"
+        curl --fail -L https://github.com/Jake-Shadle/xwin/releases/download/$xwin_version/$xwin_prefix.tar.gz | sudo tar -xzv -C /usr/bin --strip-components=1 $xwin_prefix/xwin
+        sudo mkdir /xwin
+        sudo chown $(id -u):$(id -g) /xwin
+        xwin --accept-license 1 splat --output /xwin
       shell: bash
 
     - name: Set OUTPUT_FILE variable
@@ -56,7 +68,7 @@ jobs:
       run: xmake repo --update -vD
 
     - name: Configure xmake and install dependencies
-      run: xmake config -vD --toolchain=llvm-20 --plat=${{ matrix.target_os }} --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
+      run: xmake config -vD --toolchain=llvm --target_os=${{ matrix.target_os }} --includedirs="${{ matrix.include_dirs }}" --linkdirs="${{ matrix.link_dirs }}" --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
 
     - name: Build all targets
       run: xmake build -vD -a
