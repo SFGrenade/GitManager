@@ -24,12 +24,10 @@ jobs:
       run: echo "key=$(date +'%W')_${{ matrix.target_os }}_${{ matrix.arch }}_${{ matrix.kind }}_${{ matrix.mode }}" >> $GITHUB_OUTPUT
       shell: bash
 
-    - name: Setup Clang
-      uses: egor-tensin/setup-clang@v2
+    - name: Setup LLVM
+      uses: ZhongRuoyu/setup-llvm@v0
       with:
-        version: latest
-        platform: x64
-        cc: 1
+        llvm-version: 23
 
     - name: Set OUTPUT_FILE variable
       run: |
@@ -58,7 +56,7 @@ jobs:
       run: xmake repo --update -vD
 
     - name: Configure xmake and install dependencies
-      run: xmake config -vD --toolchain=clang --plat=${{ matrix.target_os }} --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
+      run: xmake config -vD --toolchain=llvm --plat=${{ matrix.target_os }} --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
 
     - name: Build all targets
       run: xmake build -vD -a
