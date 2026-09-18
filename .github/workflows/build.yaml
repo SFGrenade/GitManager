@@ -26,7 +26,7 @@ jobs:
 
     - name: Setup Clang+LLVM
       run: |
-        sudo apt-get update && sudo apt-get install --no-install-recommends clang clang-tools lld llvm llvm-tools
+        sudo apt-get update && sudo apt-get install --no-install-recommends clang lld llvm
       shell: bash
 
     - name: Set OUTPUT_FILE variable
