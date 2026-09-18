@@ -24,20 +24,14 @@ jobs:
       run: echo "key=$(date +'%W')_${{ matrix.target_os }}_${{ matrix.arch }}_${{ matrix.kind }}_${{ matrix.mode }}" >> $GITHUB_OUTPUT
       shell: bash
 
-    - name: Setup LLVM
+    - name: Setup Clang+LLVM
       run: |
-        tmpdir="$(mktemp -d)"
-        cd "$tmpdir"
-        curl -fsSL https://apt.llvm.org/llvm.sh -o llvm.sh
-        chmod +x llvm.sh
-        sudo env DPKG_FORCE=overwrite ./llvm.sh 22 all
-        rm -rf -- "$tmpdir"
-
-        LLVM_PATH="/usr/lib/llvm-22"
-        echo "$LLVM_PATH/bin" >>"$GITHUB_PATH"
-        echo "$GITHUB_PATH" >>"$GITHUB_PATH"
-        PATH="LLVM_PATH/bin:$PATH"
-        export PATH
+        sudo apk add clang18 lld18 llvm18
+        clang++ -v
+        ld.lld -v
+        llvm-lib -v
+        clang-cl -v
+        lld-link --version
       shell: bash
 
     - name: Set OUTPUT_FILE variable
@@ -67,7 +61,7 @@ jobs:
       run: xmake repo --update -vD
 
     - name: Configure xmake and install dependencies
-      run: xmake config -vD --toolchain=llvm --plat=${{ matrix.target_os }} --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
+      run: xmake config -vD --toolchain=clang-cl --plat=${{ matrix.target_os }} --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
 
     - name: Build all targets
       run: xmake build -vD -a
