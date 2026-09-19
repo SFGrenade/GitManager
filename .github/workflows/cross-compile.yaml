@@ -67,7 +67,7 @@ jobs:
       run: xmake repo --update -vD
 
     - name: Configure xmake and install dependencies
-      run: xmake config -vD --toolchain=llvm --plat=cross --target_os=${{ matrix.target_os }} --includedirs="${{ matrix.include_dirs }}" --linkdirs="${{ matrix.link_dirs }}" --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
+      run: xmake config -vD --toolchain=llvm --plat=${{ matrix.target_os }} --target_os=${{ matrix.target_os }} --includedirs="${{ matrix.include_dirs }}" --linkdirs="${{ matrix.link_dirs }}" --arch=${{ matrix.arch }} --mode=${{ matrix.mode }} --kind=${{ matrix.kind }} --yes --policies=package.precompiled:n
 
     - name: Build all targets
       run: xmake build -vD -a
