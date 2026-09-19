@@ -38,7 +38,7 @@ jobs:
         curl --fail -L https://github.com/Jake-Shadle/xwin/releases/download/$xwin_version/$xwin_prefix.tar.gz | sudo tar -xzv -C /usr/bin --strip-components=1 $xwin_prefix/xwin
         sudo mkdir /xwin
         sudo chown $(id -u):$(id -g) /xwin
-        XWIN_ACCEPT_LICENSE=1 xwin splat --output /xwin
+        XWIN_ACCEPT_LICENSE=true xwin splat --output /xwin
       shell: bash
 
     - name: Set OUTPUT_FILE variable
